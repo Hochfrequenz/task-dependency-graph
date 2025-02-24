@@ -17,12 +17,18 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
-dependencies = []     # add all the dependencies here
+dependencies = [
+    "pydantic[email]>=2",
+    "pydantic-settings",
+    "networkx",
+    "aiohttp"
+] # add all the dependencies here
 dynamic = ["readme", "version"]
 
 [project.optional-dependencies]
 tests = [
-    "pytest==8.3.4"
+    "pytest==8.3.4",
+    "pytest-asyncio==0.21.2"
 ]
 linting = [
     "pylint==3.3.4"
@@ -63,6 +69,10 @@ profile = "black"
 
 [tool.pylint."MESSAGES CONTROL"]
 max-line-length = 120
+disable = [
+    "too-few-public-methods",
+    "fixme"
+]
 
 [mypy]
 truethy-bool = true
