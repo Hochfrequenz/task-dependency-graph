@@ -5,7 +5,7 @@ from taskdependencygraph.models.ids import TaskId
 from taskdependencygraph.models.task_node import TaskNode
 
 
-def test_task_is_hashable():
+def test_task_is_hashable() -> None:
     """
     Test if a task instance is hashable (required for use as networkx node)
     """

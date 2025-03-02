@@ -6,6 +6,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+from pydantic import AwareDatetime
+
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
@@ -219,8 +221,10 @@ non_existent_task_id_1 = TaskId(UUID("99999933-9999-9999-9999-999999999999"))
 non_existent_task_id_2 = TaskId(UUID("99999933-9993-9999-9999-999999999999"))
 
 
-def build_simple_graph(task_list_1, dependency_list_1, starting_time_of_run_1):
-    simple_graph = TaskDependencyGraph(task_list_1, dependency_list_1, starting_time_of_run_1)
+def build_simple_graph(
+    task_list: list[TaskNode], dependency_list: list[TaskDependencyEdge], starting_time_of_run: AwareDatetime
+) -> TaskDependencyGraph:
+    simple_graph = TaskDependencyGraph(task_list, dependency_list, starting_time_of_run)
     return simple_graph
     # Graph created with task_list_1 and dependency_list_1
     # (1-4 are the numbers of the task_examples):
@@ -231,8 +235,10 @@ def build_simple_graph(task_list_1, dependency_list_1, starting_time_of_run_1):
     #               4
 
 
-def build_simple_graph_closed(task_list_1, dependency_list_1b, starting_time_of_run_1):
-    simple_graph_cosed = TaskDependencyGraph(task_list_1, dependency_list_1b, starting_time_of_run_1)
+def build_simple_graph_closed(
+    task_list: list[TaskNode], dependency_list: list[TaskDependencyEdge], starting_time_of_run: AwareDatetime
+) -> TaskDependencyGraph:
+    simple_graph_cosed = TaskDependencyGraph(task_list, dependency_list, starting_time_of_run)
     return simple_graph_cosed
     # With task_list_1 and dependency_list_1b the following graph is created:
     #            1
@@ -242,8 +248,10 @@ def build_simple_graph_closed(task_list_1, dependency_list_1b, starting_time_of_
     #           4
 
 
-def build_complex_graph(task_list_2, dependency_list_2, starting_time_of_run_1):
-    complex_graph = TaskDependencyGraph(task_list_2, dependency_list_2, starting_time_of_run_1)
+def build_complex_graph(
+    task_list: list[TaskNode], dependency_list: list[TaskDependencyEdge], starting_time_of_run: AwareDatetime
+) -> TaskDependencyGraph:
+    complex_graph = TaskDependencyGraph(task_list, dependency_list, starting_time_of_run)
     return complex_graph
     # Graph created with task_list_2 and dependency_list_2
     # (5-11 are the numbers of the task_examples):
@@ -259,10 +267,10 @@ def build_complex_graph(task_list_2, dependency_list_2, starting_time_of_run_1):
 
 
 def build_complex_graph_made_from_unsorted_task_list_and_with_different_starting_time(
-    task_list_2, dependency_list_2, starting_time_of_run_2
-):
+    task_list: list[TaskNode], dependency_list: list[TaskDependencyEdge], starting_time: AwareDatetime
+) -> TaskDependencyGraph:
     complex_graph_made_from_unsorted_task_list_and_with_different_starting_time = TaskDependencyGraph(
-        task_list_2, dependency_list_2, starting_time_of_run_2
+        task_list, dependency_list, starting_time
     )
     return complex_graph_made_from_unsorted_task_list_and_with_different_starting_time
     # With unsorted task_list_2b (not sorted by starting time) and dependency_list_2 the following graph is created:
@@ -278,10 +286,10 @@ def build_complex_graph_made_from_unsorted_task_list_and_with_different_starting
 
 
 def build_another_complex_graph_with_unsorted_task_list_and_different_starting_time(
-    task_list_2b, dependency_list_3, starting_time_of_run_2
-):
+    task_list: list[TaskNode], dependency_list: list[TaskDependencyEdge], starting_time_of_run: AwareDatetime
+) -> TaskDependencyGraph:
     another_complex_graph_with_unsorted_task_list_and_different_starting_time = TaskDependencyGraph(
-        task_list_2b, dependency_list_3, starting_time_of_run_2
+        task_list, dependency_list, starting_time_of_run
     )
     return another_complex_graph_with_unsorted_task_list_and_different_starting_time
     # With unsorted task_list_2b (not sorted by starting time) and dependency_list_3 the following graph is created:

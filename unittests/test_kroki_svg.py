@@ -18,7 +18,7 @@ async def test_kroki_is_ready(internal_kroki_client: KrokiClient) -> None:
 
 
 @pytest.mark.parametrize("mode", [pytest.param("dot"), pytest.param("gantt")])
-async def test_convert_tdg_to_svg(internal_kroki_client: Plotter, mode: PlotMode):
+async def test_convert_tdg_to_svg(internal_kroki_client: Plotter, mode: PlotMode) -> None:
     tdg = TaskDependencyGraph(
         task_list_2,
         dependency_list_2,

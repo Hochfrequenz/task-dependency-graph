@@ -29,7 +29,7 @@ from .example_tdgs import graph_anna, task_A, task_C, task_D
         ),
     ],
 )
-def test_add_ok_task(graph: TaskDependencyGraph, node: TaskNode):
+def test_add_ok_task(graph: TaskDependencyGraph, node: TaskNode) -> None:
     graph.add_task(node)
     assert graph._graph.has_node(node.id)
 
@@ -54,12 +54,12 @@ def test_add_ok_task(graph: TaskDependencyGraph, node: TaskNode):
         ),
     ],
 )
-def test_add_bad_task(graph: TaskDependencyGraph, node: TaskNode):
+def test_add_bad_task(graph: TaskDependencyGraph, node: TaskNode) -> None:
     with pytest.raises(ValueError):
         graph.add_task(node)
 
 
-def test_add_new_edge_for_two_existing_nodes():
+def test_add_new_edge_for_two_existing_nodes() -> None:
     # we add a new node between C and D
     graph = copy.deepcopy(graph_anna)
     assert graph._graph.has_edge(task_C.id, ID_OF_ARTIFICIAL_ENDNODE)
@@ -71,7 +71,7 @@ def test_add_new_edge_for_two_existing_nodes():
     assert not graph._graph.has_edge(task_C.id, ID_OF_ARTIFICIAL_ENDNODE)
 
 
-def test_adding_a_cycle_fails():
+def test_adding_a_cycle_fails() -> None:
     # we add a new node between C and D
     graph = copy.deepcopy(graph_anna)
     new_edge_which_causes_a_cycle = TaskDependencyEdge(

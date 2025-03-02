@@ -7,7 +7,7 @@ import uuid
 import xml.etree.ElementTree as ET
 
 from aiohttp import ClientConnectorError, ClientResponseError, ClientSession, ClientTimeout
-from pydantic import AnyHttpUrl, BaseModel
+from pydantic import BaseModel, HttpUrl
 from yarl import URL
 
 from taskdependencygraph.plotting.protocols import PlotMode
@@ -21,7 +21,7 @@ class KrokiConfig(BaseModel):
     Configuration to connect with the kroki service
     """
 
-    host: AnyHttpUrl
+    host: HttpUrl
     """
     host is the base/root URL of the kroki service (e.g. 'http://localhost:8123' or 'https://kroki.io')
     """

@@ -1,5 +1,5 @@
 """
-contains ID types
+contains ID types we use to differentiate between UUIDs
 """
 
 import uuid

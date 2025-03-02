@@ -143,7 +143,7 @@ class TestIfNodesAndEdgesAreCombinedToBuildPaths:
         graph: TaskDependencyGraph,
         task_1: TaskNode,
         task_2: TaskNode,
-    ):
+    ) -> None:
         # pylint: disable=protected-access
         assert nx.has_path(graph._graph, task_1.id, task_2.id) is True
 
@@ -206,7 +206,7 @@ class TestIfTasksAreIdentifiedAsBeingOnCriticalPath:
         graph: TaskDependencyGraph,
         task_id: TaskId,
         expected_result: bool,
-    ):
+    ) -> None:
         """
         This test checks if a task is correctly identified as being/as not being on the critical path.
         """
@@ -227,7 +227,7 @@ class TestIfTasksAreIdentifiedAsBeingOnCriticalPath:
         self,
         graph: TaskDependencyGraph,
         non_existent_task_id: TaskId,
-    ):
+    ) -> None:
         """
         This test checks if a non-existent task id causes a value error, when checking, whether it is on the
         critical path (instead of returning False)
@@ -282,7 +282,7 @@ class TestIfDurationOfCriticalPathBeforeTaskIsCalculatedCorrectly:
         task_id: TaskId,
         graph: TaskDependencyGraph,
         expected: timedelta,
-    ):
+    ) -> None:
         planned_duration_of_predecessor_tasks_on_critical_path = (
             graph.calculate_planned_duration_of_predecessor_tasks_on_critical_path(task_id)
         )
@@ -302,7 +302,7 @@ class TestIfDurationOfCriticalPathBeforeTaskIsCalculatedCorrectly:
         self,
         task_id: TaskId,
         graph: TaskDependencyGraph,
-    ):
+    ) -> None:
         with pytest.raises(ValueError):
             _ = graph.calculate_planned_duration_of_predecessor_tasks_on_critical_path(task_id)
 
@@ -348,7 +348,7 @@ class TestIfPlannedStartingTimeOfTaskIsCalculatedCorrectly:
         graph: TaskDependencyGraph,
         task_id: TaskId,
         expected: AwareDatetime,
-    ):
+    ) -> None:
         planned_starting_time_of_task = graph.calculate_planned_starting_time_of_task(task_id)
         assert planned_starting_time_of_task == expected
 
@@ -487,12 +487,14 @@ class TestIfPlannedStartingTimeOfTaskIsCalculatedCorrectly:
         ),
     ],
 )
-def test_planned_starting_time_with_fixed_start(tdg: TaskDependencyGraph, task_id: TaskId, expected: AwareDatetime):
+def test_planned_starting_time_with_fixed_start(
+    tdg: TaskDependencyGraph, task_id: TaskId, expected: AwareDatetime
+) -> None:
     actual = tdg.calculate_planned_starting_time_of_task(task_id)
     assert actual == expected
 
 
-def test_planned_starting_time_is_calculated_after_modifying_a_graph():
+def test_planned_starting_time_is_calculated_after_modifying_a_graph() -> None:
     """
     make sure that the weights are re-calculated after adding a node or an edge
     """
@@ -516,28 +518,28 @@ def test_planned_starting_time_is_calculated_after_modifying_a_graph():
     )
 
 
-def test_extract_subgraph_only_accepts_milestones():
+def test_extract_subgraph_only_accepts_milestones() -> None:
     full_graph = copy.deepcopy(graph_ferdinand)
     with pytest.raises(ValueError) as raised_value_error:
         _ = full_graph.extract_sub_graph(task_S.id, task_W.id)
     assert "not a milestone" in str(raised_value_error.value)
 
 
-def test_extract_subgraph_only_accepts_known_tasks():
+def test_extract_subgraph_only_accepts_known_tasks() -> None:
     full_graph = copy.deepcopy(graph_ferdinand)
     with pytest.raises(ValueError) as raised_value_error:
         _ = full_graph.extract_sub_graph(TaskId(uuid.uuid4()), task_W.id)
     assert "(start) does not exist in the graph" in str(raised_value_error.value)
 
 
-def test_extract_subgraph_if_end_is_before_start():
+def test_extract_subgraph_if_end_is_before_start() -> None:
     full_graph = copy.deepcopy(graph_ferdinand_with_milestones)
     with pytest.raises(ValueError) as raised_value_error:
         _ = full_graph.extract_sub_graph(task_W_milestone.id, task_S_milestone.id)
     assert "There is no path between" in str(raised_value_error.value)
 
 
-def test_extract_subgraph():
+def test_extract_subgraph() -> None:
     full_graph = copy.deepcopy(graph_ferdinand_with_milestones)
     actual = full_graph.extract_sub_graph(task_S_milestone.id, task_W_milestone.id)
     assert isinstance(actual, TaskDependencyGraph)
@@ -603,7 +605,7 @@ class TestIfListIsCorrectlySortedByStartingTime:
         expected_0: AwareDatetime,
         expected_1: TaskNode,
         expected_2: TaskNode,
-    ):
+    ) -> None:
         new_task_list = graph.create_list_of_task_node_copies_with_planned_starting_time()
         assert (
             new_task_list[3].planned_starting_time == expected_0
@@ -615,14 +617,14 @@ class TestIfListIsCorrectlySortedByStartingTime:
             new_task_list[6].id == expected_2.id
         ), "The planned starting time hasn't been calculated correctly or the list hasn't been sorted correctly."
 
-    def test_labels(self):
+    def test_labels(self) -> None:
         tdg = build_complex_graph(task_list_2, dependency_list_2, starting_time_of_run_1)
         actual = tdg.labels()
         assert len(actual) == len(task_list_2) + 2
         assert "START" in actual.values()
         assert "END" in actual.values()
 
-    def test_deep_copy(self):
+    def test_deep_copy(self) -> None:
         tdg = build_complex_graph(task_list_2, dependency_list_2, starting_time_of_run_1)
         digraph = tdg.get_digraph_copy()
         assert digraph is not tdg._graph  # pylint:disable=protected-access

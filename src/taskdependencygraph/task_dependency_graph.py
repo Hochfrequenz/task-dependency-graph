@@ -188,7 +188,7 @@ class TaskDependencyGraph:
         self._graph.remove_node(task_node_as_artificial_startnode.id)
         self._graph.remove_node(task_node_as_artificial_endnode.id)
 
-    def _stretch_edges_with_successor_that_has_fixed_start(self):
+    def _stretch_edges_with_successor_that_has_fixed_start(self) -> None:
         """
         extends the duration of those tasks, which have a successor with the earliest possible start set.
         Ideally, this should only be called if the edges are reset with self._reset_edges().
@@ -215,7 +215,7 @@ class TaskDependencyGraph:
                         self._get_duration_or_buffer_length(predecessor_id, task_id).total_seconds() / 60
                     )
 
-    def _reset_edges(self):
+    def _reset_edges(self) -> None:
         """
         (Re)sets the edge weights to the duration of the predecessor task.
         Does _not_ consider the earliest possible starts.
@@ -227,7 +227,7 @@ class TaskDependencyGraph:
                 self._graph.nodes[predecessor_id]["domain_model"].planned_duration.total_seconds() / 60
             )
 
-    def _account_for_earliest_start(self):
+    def _account_for_earliest_start(self) -> None:
         """
         Adjusts the edge weights to account for the earliest possible start of the successor task.
         """
