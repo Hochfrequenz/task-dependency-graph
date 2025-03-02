@@ -1,8 +1,9 @@
+import uuid
 from typing import Generator
 
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.network import Network
-from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for
+from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for, wait_for_logs
 
 _MERMAID_INTERNAL_PORT = 8124
 _KROKI_INTERNAL_PORT = 8000
@@ -33,17 +34,17 @@ def start_kroki_on_localhost(docker_network: Network) -> Generator[int, None, No
     Yields the exposed kroki port.
     """
     kroki = DockerContainer("yuzutech/kroki:0.24.1")
-    mermaid = DockerContainer("yuzutech/kroki-mermaid")
     kroki.with_network(docker_network)
-    mermaid.with_exposed_ports(_MERMAID_INTERNAL_PORT)
+    mermaid = DockerContainer("yuzutech/kroki-mermaid")
     mermaid.with_network(docker_network)
-    kroki.with_exposed_ports(_KROKI_INTERNAL_PORT)
+    mermaid.with_network_aliases("mermaid")
     mermaid.start()
     wait_container_is_ready(mermaid)
-    mermaid_port_on_localhost = mermaid.get_exposed_port(_MERMAID_INTERNAL_PORT)
-    kroki.with_env("KROKI_MERMAID_HOST", f"{mermaid.get_container_host_ip()}:{mermaid_port_on_localhost}")
+    kroki.with_env("KROKI_MERMAID_HOST", "mermaid")
+    kroki.with_exposed_ports(_KROKI_INTERNAL_PORT)
     kroki.start()
     wait_container_is_ready(kroki)
+    wait_for_logs(kroki, "Succeeded in deploying verticle")  # this was just a guess, but it seems to work :)
     port_on_localhost = kroki.get_exposed_port(_KROKI_INTERNAL_PORT)
     yield int(port_on_localhost)
     mermaid.stop()
