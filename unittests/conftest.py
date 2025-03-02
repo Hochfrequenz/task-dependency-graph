@@ -1,9 +1,8 @@
-import uuid
 from typing import Generator
 
 from testcontainers.core.container import DockerContainer
 from testcontainers.core.network import Network
-from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for, wait_for_logs
+from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for_logs
 
 _MERMAID_INTERNAL_PORT = 8124
 _KROKI_INTERNAL_PORT = 8000
