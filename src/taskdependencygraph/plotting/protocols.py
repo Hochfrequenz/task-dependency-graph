@@ -1,3 +1,7 @@
+"""
+interface like descriptions for any kind of plotting "client" library
+"""
+
 from typing import Literal, Protocol
 
 PlotMode = Literal["dot", "gantt"]
@@ -32,5 +36,5 @@ class Plotter(Protocol):
 
     async def plot_as_svg(self, graph: MermaidPlottable | DotPlottable, mode: PlotMode) -> str:
         """
-        Plots something plottable as SVG
+        Plots something plottable as SVG; returns the SVG as XML string
         """
