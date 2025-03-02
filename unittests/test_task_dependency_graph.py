@@ -6,12 +6,12 @@ import networkx as nx  # type: ignore[import-untyped]
 import pytest
 from pydantic import AwareDatetime
 
-from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
+from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
 from taskdependencygraph.models.task_node_as_artificial_endnode import task_node_as_artificial_endnode
 from taskdependencygraph.models.task_node_as_artificial_startnode import task_node_as_artificial_startnode
-from taskdependencygraph.models.ids import TaskDependencyId, TaskId
+from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
 from .example_data_for_test_task_dependency_graph import (
     build_another_complex_graph_with_unsorted_task_list_and_different_starting_time,

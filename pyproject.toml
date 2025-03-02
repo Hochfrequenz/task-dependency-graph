@@ -28,7 +28,8 @@ dynamic = ["readme", "version"]
 [project.optional-dependencies]
 tests = [
     "pytest==8.3.4",
-    "pytest-asyncio==0.21.2"
+    "pytest-asyncio==0.21.2",
+    "testcontainers"
 ]
 linting = [
     "pylint==3.3.4"
@@ -103,3 +104,6 @@ exclude = ["/unittests"]
 [tool.hatch.build.targets.wheel]
 only-include = ["src"]
 sources = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

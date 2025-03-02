@@ -6,10 +6,10 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
+from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
-from taskdependencygraph.models.ids import TaskDependencyId, TaskId
+from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
 starting_time_of_run_1 = datetime(year=2024, month=3, day=12, hour=12, minute=10, tzinfo=timezone.utc)
 starting_time_of_run_2 = datetime(year=2024, month=3, day=12, hour=5, minute=0, tzinfo=timezone.utc)

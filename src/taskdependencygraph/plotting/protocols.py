@@ -1,7 +1,8 @@
 from typing import Literal, Protocol
 
-
 PlotMode = Literal["dot", "gantt"]
+
+
 class DotPlottable(Protocol):
     """
     something that can be plotted using Dot/GraphViz
@@ -33,5 +34,3 @@ class Plotter(Protocol):
         """
         Plots something plottable as SVG
         """
-
-

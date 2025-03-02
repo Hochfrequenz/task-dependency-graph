@@ -1,31 +1,18 @@
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
-from typing import AsyncGenerator
 
 import pytest
-from pydantic_core import Url
 
-from taskdependencygraph.plotting.protocols import PlotMode, Plotter
-from  taskdependencygraph.plotting.kroki import KrokiClient, KrokiConfig
-from  taskdependencygraph.task_dependency_graph  import TaskDependencyGraph
 from taskdependencygraph.models.task_node import TaskNode
+from taskdependencygraph.plotting.kroki import KrokiClient
+from taskdependencygraph.plotting.protocols import PlotMode, Plotter
+from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
 # don't ask; it's some weird type-checking issues (related to our tox setup) that require me to do this ugly import
-from .example_data_for_test_task_dependency_graph import (
-    dependency_list_2,
-    task_list_2,
-)
+from .example_data_for_test_task_dependency_graph import dependency_list_2, task_list_2
 
 
-@pytest.fixture(scope="function")
-async def internal_kroki_client() -> AsyncGenerator[KrokiClient, None]:
-    kroki_config = KrokiConfig(host=Url("http://localhost:8123/"))  # see docker-compose.yml
-    kroki_client = KrokiClient(kroki_config)
-    yield kroki_client
-    await kroki_client.close_session()
-
-
-async def test_kroki_is_ready(internal_kroki_client: KrokiClient):
+async def test_kroki_is_ready(internal_kroki_client: KrokiClient) -> None:
     actual = await internal_kroki_client.is_ready()
     assert actual is True
 

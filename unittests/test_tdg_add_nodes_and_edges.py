@@ -9,12 +9,12 @@ from datetime import timedelta
 
 import pytest
 
-from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
+from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
 from taskdependencygraph.models.task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE
 from taskdependencygraph.models.task_node_as_artificial_startnode import ID_OF_ARTIFICIAL_STARTNODE
-from taskdependencygraph.models.ids import TaskDependencyId, TaskId
+from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
 from .example_tdgs import graph_anna, task_A, task_C, task_D
 

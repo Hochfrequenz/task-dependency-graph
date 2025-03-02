@@ -1,12 +1,10 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-
-
-from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
+from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
-from taskdependencygraph.models.ids import TaskDependencyId, TaskId
+from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
 # pylint:disable=anomalous-backslash-in-string
 
