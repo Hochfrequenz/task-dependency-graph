@@ -178,9 +178,9 @@ We suggest to just use two tables: One for the edges, one for the nodes.
 You can even add trigger-based [DB constraints to prevent loops in the graph](https://gist.github.com/hf-kklein/49f6d05bd29ca850e33f5ccff3e66469) which are faster than you might guess, even for hundreds of tasks.
 
 ## Professional Support / Further Development
-This library was built for an internal project, but we decided to publish it.
-This is why some strings are still hardcoded or there are features which might not seem useful at first glance.
+This library was built for an internal project, but we decided to publish it because it might be useful to someone.
+But this is why some strings are still hardcoded here and there and why some features might not seem useful at first glance.
 
-We, at Hochfrequenz, also built a SQLAlchemy+FastAPI+htmx web application around this library in which you can plan and schedule time-critical tasks and projects in the browser.
+We at Hochfrequenz also built a SQLAlchemy+FastAPI+htmx web application around this library in which you can plan and schedule time-critical tasks and projects in the browser.
 It's ready to use, but not pretty enough to publish it yet ;)
 Just ping us if interested.
