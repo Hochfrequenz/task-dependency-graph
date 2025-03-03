@@ -15,11 +15,11 @@ from taskdependencygraph.plotting.protocols import PlotMode
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
 
+# pylint:disable=too-many-locals # it's just a demo test
 async def test_baking_a_cake(kroki_client: KrokiClient) -> None:
     """
     a test case that makes the possibilities clear
     """
-    kroki_client = kroki_client
     start = datetime(2025, 1, 1, 18, 0, 0, 0, tzinfo=UTC)
 
     # first we create some tasks that need to be done
