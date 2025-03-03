@@ -177,9 +177,9 @@ You can store the nodes and edges on a database.
 We suggest to just use two tables: One for the edges, one for the nodes.
 You can even add trigger-based [DB constraints to prevent loops in the graph](https://gist.github.com/hf-kklein/49f6d05bd29ca850e33f5ccff3e66469) which are faster than you might guess, even for hundreds of tasks.
 
-## Professional Support / Further Development
-This library was built for an internal project, but we decided to publish it because it might be useful to someone.
-But this is why some strings are still hardcoded here and there and why some features might not seem useful at first glance.
+## Maintainers/ Further Development / Professional Support
+This library was built for and then cut out of a mainly internal project by [@hf-crings](https://github.com/hf-crings), [@OLILHR](https://github.com/OLILHR), [@hf-sheese](https://github.com/hf-sheese) and [@hf-kklein](https://github.com/hf-kklein), but we decided to publish it, because it might be useful to someone.
+This is why some things are hardcoded here and there and why some features might seem unintuitive at first glance.
 
 We at Hochfrequenz also built a SQLAlchemy+FastAPI+htmx web application around this library in which you can plan and schedule time-critical tasks and projects in the browser.
 It's ready to use, but not pretty enough to publish it yet ;)
