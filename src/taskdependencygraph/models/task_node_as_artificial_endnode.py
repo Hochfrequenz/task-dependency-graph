@@ -19,6 +19,7 @@ ID_OF_ARTIFICIAL_ENDNODE: TaskId = TaskId(UUID("99999999-9999-9999-9999-99999999
 task_node_as_artificial_endnode = TaskNode(
     id=ID_OF_ARTIFICIAL_ENDNODE,
     external_id="__END__",
-    name="task without duration as artificial endnode",
+    name="END",
     planned_duration=timedelta(minutes=0),
 )
+__all__ = ["ID_OF_ARTIFICIAL_ENDNODE", "task_node_as_artificial_endnode"]

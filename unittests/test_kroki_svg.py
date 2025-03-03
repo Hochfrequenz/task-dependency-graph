@@ -12,19 +12,19 @@ from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 from .example_data_for_test_task_dependency_graph import dependency_list_2, task_list_2
 
 
-async def test_kroki_is_ready(internal_kroki_client: KrokiClient) -> None:
-    actual = await internal_kroki_client.is_ready()
+async def test_kroki_is_ready(kroki_client: KrokiClient) -> None:
+    actual = await kroki_client.is_ready()
     assert actual is True
 
 
 @pytest.mark.parametrize("mode", [pytest.param("dot"), pytest.param("gantt")])
-async def test_convert_tdg_to_svg(internal_kroki_client: Plotter, mode: PlotMode) -> None:
+async def test_convert_tdg_to_svg(kroki_client: Plotter, mode: PlotMode) -> None:
     tdg = TaskDependencyGraph(
         task_list_2,
         dependency_list_2,
         datetime(year=2024, month=3, day=12, hour=12, minute=10, tzinfo=timezone.utc),
     )
-    svg = await internal_kroki_client.plot_as_svg(tdg, mode=mode)
+    svg = await kroki_client.plot_as_svg(tdg, mode=mode)
     assert svg is not None
     assert svg.startswith("<?xml version=")
     assert not svg.startswith("<ns0:svg xmlns:ns0=@http://www.w3.org/2000/svg")

@@ -143,3 +143,6 @@ class KrokiClient:
                 return await self._plot_mermaid_as_svg(mermaid_gantt_str)
             case _:
                 raise ValueError(f"Unknown mode '{mode}'")
+
+
+__all__ = ["KrokiClient", "KrokiConfig"]

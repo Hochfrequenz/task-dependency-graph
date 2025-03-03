@@ -38,3 +38,6 @@ class Plotter(Protocol):
         """
         Plots something plottable as SVG; returns the SVG as XML string
         """
+
+
+__all__ = ["DotPlottable", "MermaidPlottable", "Plotter"]

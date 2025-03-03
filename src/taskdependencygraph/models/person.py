@@ -22,3 +22,6 @@ class Person(BaseModel):
     phone_number: str | None = None
     slack_id: str | None = None
     is_active: bool = True
+
+
+__all__ = ["Person"]

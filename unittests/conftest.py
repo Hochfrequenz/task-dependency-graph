@@ -54,7 +54,7 @@ def start_kroki_on_localhost(docker_network: Network) -> Generator[int, None, No
 
 
 @pytest.fixture(scope="function")
-async def internal_kroki_client(start_kroki_on_localhost: int) -> AsyncGenerator[KrokiClient, None]:
+async def kroki_client(start_kroki_on_localhost: int) -> AsyncGenerator[KrokiClient, None]:
     kroki_config = KrokiConfig(host=HttpUrl(f"http://localhost:{start_kroki_on_localhost}/"))
     kroki_client = KrokiClient(kroki_config)
     yield kroki_client

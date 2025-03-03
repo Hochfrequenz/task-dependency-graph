@@ -16,6 +16,7 @@ ID_OF_ARTIFICIAL_STARTNODE: TaskId = TaskId(UUID("11111111-1111-1111-1111-111111
 task_node_as_artificial_startnode = TaskNode(
     id=ID_OF_ARTIFICIAL_STARTNODE,
     external_id="__START__",
-    name="task without duration as artificial startnode",
+    name="START",
     planned_duration=timedelta(minutes=0),
 )
+__all__ = ["ID_OF_ARTIFICIAL_STARTNODE", "task_node_as_artificial_startnode"]

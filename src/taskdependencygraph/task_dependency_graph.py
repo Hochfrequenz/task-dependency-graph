@@ -246,13 +246,13 @@ class TaskDependencyGraph:
         assignee_name_or_placeholder: str
 
         if task_node.assignee is None:
-            assignee_name_or_placeholder = "(niemand)"
+            assignee_name_or_placeholder = "(nobody)"
         else:
             assignee_name_or_placeholder = task_node.assignee.name
         parts: list[str] = [
             task_node.external_id,
             task_node.name,
-            f"{assignee_name_or_placeholder} - Dauer {task_node.planned_duration}min",
+            f"{assignee_name_or_placeholder} - duration {task_node.planned_duration}min",
             f"Start {planned_start_str}",
         ]
         return "|".join(parts)
@@ -584,7 +584,7 @@ class TaskDependencyGraph:
     dateFormat YYYY-MM-DDTHH:mm:SZ
     axisFormat %d.%m %H:%M
     tickInterval 15minute
-    section Beispiel Stream
+    section Example Stream
 """
         # todo: group by stream https://github.com/Hochfrequenz/cutover-tool/issues/374
         result += "".join(self._get_task_mermaid_gantt(tid) for tid in self._graph.nodes().keys())

@@ -119,3 +119,6 @@ class TaskNode(BaseModel):
             result += f'{key}="{value}";'
         result += "];\n"
         return result
+
+
+__all__ = ["TaskNode"]

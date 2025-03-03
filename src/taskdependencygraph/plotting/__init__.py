@@ -5,6 +5,7 @@ But instead of using the online kroki.io service, we host it locally in a docker
 Otherwise, we'd quickly run into rate limits.
 """
 
+from taskdependencygraph.plotting.kroki import KrokiClient, KrokiConfig
 from taskdependencygraph.plotting.protocols import DotPlottable, MermaidPlottable
 
-__all__ = ["DotPlottable", "MermaidPlottable"]
+__all__ = ["DotPlottable", "MermaidPlottable", "KrokiClient", "KrokiConfig"]

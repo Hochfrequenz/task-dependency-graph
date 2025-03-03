@@ -32,3 +32,6 @@ class TaskExecutionStatus(StrEnum):
     """
     The assignee has reported that the task is obsolete and does not need to be executed anymore.
     """
+
+
+__all__ = ["TaskExecutionStatus"]

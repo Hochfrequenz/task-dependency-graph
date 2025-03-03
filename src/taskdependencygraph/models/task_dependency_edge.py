@@ -40,3 +40,6 @@ class TaskDependencyEdge(BaseModel):
         For details on the dot language see https://graphviz.org/doc/info/lang.html
         """
         return f'"{self.task_predecessor}" -> "{self.task_successor}"\n'
+
+
+__all__ = ["TaskDependencyEdge"]
