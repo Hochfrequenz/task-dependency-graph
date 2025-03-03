@@ -6,6 +6,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+from taskdependencygraph.models import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
 from taskdependencygraph.models.task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE
@@ -23,50 +24,52 @@ async def test_baking_a_cake(kroki_client: KrokiClient) -> None:
 
     # first we create some tasks that need to be done
     shopping_at_grocery_store = TaskNode(
-        id=uuid.uuid4(),
         planned_duration=timedelta(minutes=30),
         external_id="supermarket",
         name="Shopping Flour and Sugar in the Grocery Store",
+        id=TaskId(uuid.uuid4()),
     )
     shopping_at_weekly_market = TaskNode(
         planned_duration=timedelta(minutes=20),
         external_id="strawberries",
         name="Shopping Strawberries at Weekly Market",
-        id=uuid.uuid4(),
+        id=TaskId(uuid.uuid4()),
     )
     milestone_shopping_is_done = TaskNode(
         is_milestone=True,
         external_id="milestone-0",
         planned_duration=timedelta(minutes=0),
         name="Milestone 'Shopping is Done'",
-        id=uuid.uuid4(),
+        id=TaskId(uuid.uuid4()),
     )
     whipping_the_creme = TaskNode(
         external_id="creme",
         name="Preparing the Creme",
         planned_duration=timedelta(minutes=15),
-        id=uuid.uuid4(),
+        id=TaskId(uuid.uuid4()),
     )
     doing_the_cake_base = TaskNode(
         external_id="cake-base",
         name="Doing Cake Base",
         planned_duration=timedelta(minutes=30),
-        id=uuid.uuid4(),
+        id=TaskId(uuid.uuid4()),
     )
     decoration = TaskNode(
         external_id="decoration",
         name="Add some Decoration",
         planned_duration=timedelta(minutes=5),
-        id=uuid.uuid4(),
+        id=TaskId(uuid.uuid4()),
     )
     putting_it_all_together = TaskNode(
-        id=uuid.uuid4(),
         planned_duration=timedelta(minutes=20),
         external_id="putting-it-all-together",
         name="Putting It All Together",
+        id=TaskId(uuid.uuid4()),
     )
     edges = [
-        TaskDependencyEdge(task_predecessor=predecessor.id, task_successor=successor.id, id=uuid.uuid4())
+        TaskDependencyEdge(
+            task_predecessor=predecessor.id, task_successor=successor.id, id=TaskDependencyId(uuid.uuid4())
+        )
         for predecessor, successor in [
             (shopping_at_grocery_store, milestone_shopping_is_done),
             (shopping_at_weekly_market, milestone_shopping_is_done),
@@ -119,3 +122,4 @@ async def test_baking_a_cake(kroki_client: KrokiClient) -> None:
         actual[f"{plot_mode}_svg"] = svg_code
         with open(Path(__file__).parent / f"baking_a_cake_{plot_mode}.svg", "w", encoding="utf-8") as outfile:
             outfile.write(svg_code)
+    # we used to have a snapshot test on actual here, but it required hardcoded uuids to have reproducible results

@@ -1,10 +1,12 @@
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Python Versions (officially) supported](https://img.shields.io/pypi/pyversions/taskdependencygraph.svg)
+![Pypi status badge](https://img.shields.io/pypi/v/taskdependencygraph)
+
 # Task Dependency Graph
 
 Task Dependency Graph is a Python package that allows to model tasks and dependencies between tasks as a directed graph.
 It also supports visualizing the graph with [dot](https://graphviz.org/docs/layouts/dot/) for a graph-like view
 or [mermaid](https://mermaid.js.org/) for Gantt charts.
-
-### Tech-Stack
 
 The package is built on [networkx](https://networkx.org/) and under the hood the task dependency graph is just a
 networkx [DiGraph](https://networkx.org/documentation/stable/reference/classes/digraph.html).
@@ -12,11 +14,13 @@ For visualization, it uses GraphViz via [kroki](https://kroki.io/) (in a Docker 
 
 ## Example / How to use
 
-Install the pacakge from [PyPI](https://pypi.org/project/taskdependencygraph/)
+Install the package from [PyPI](https://pypi.org/project/taskdependencygraph/)
 
 ```bash
 pip install taskdependencygraph
 ```
+
+Imagine the following scenario:
 
 You and your partner are invited to a birthday party.
 You promised to bring a cake.
@@ -32,12 +36,13 @@ from datetime import timedelta
 from taskdependencygraph.models import TaskNode
 
 my_task = TaskNode(
-    id=uuid.uuid4(),  # boilerplate only, but you need the ID to find nodes in your graph
+    id=uuid.uuid4(),  # boilerplate only, but you need the ID to find nodes in your graph later on
     name="Shop groceries",  # human readable description
-    external_id="some unique string",  # technical for those who don't like uuids ;)
+    external_id="some unique string",  # technical ID for those who don't like uuids ;)
     planned_duration=timedelta(minutes=15)  # how long it probably takes
-    # You may also add assignees or earliest possible start
-    # (e.g. when the supermarket opens at 7am, you cannot shop groceries before, even if you're awake)
+    # You may also add an assignees or an earliest_possible_start
+    # (The latter is useful, when e.g. the supermarket opens at 7am and you cannot shop groceries before,
+    # even if you were awake and have nothing else todo.)
 )
 ```
 
@@ -123,9 +128,9 @@ services:
       - "8123:8000"
   mermaid:
     image: yuzutech/kroki-mermaid
-    expose:
-      - "8124"
+# run
 # docker-compose up -d
+# and kroki is ready at localhost:8123
 ```
 
 ```python
@@ -151,7 +156,7 @@ if __name__ == '__main__':
 
 The result may look like this:
 
-### Gantt Chart
+### Gantt Chart (Mermaid)
 
 ![A Gantt chart](unittests/baking_a_cake_gantt.svg)
 
@@ -161,7 +166,7 @@ Shopping' done before starting with the next step, even though there's no "real"
 buying the strawberries.)
 The Gantt chart is useful to get an overview of your project and to identify which tasks are crucial.
 
-### Raw Graph
+### Raw Graph ("dot" engine)
 
 ![](unittests/baking_a_cake_dot.svg)
 
@@ -169,4 +174,13 @@ The raw graph helps you to understand the tasks and dependencies setup in a not 
 
 ## Storing the Graph in a Database
 You can store the nodes and edges on a database.
-You can even add trigger-based constraints to prevent circles
+We suggest to just use two tables: One for the edges, one for the nodes.
+You can even add trigger-based [DB constraints to prevent loops in the graph](https://gist.github.com/hf-kklein/49f6d05bd29ca850e33f5ccff3e66469) which are faster than you might guess, even for hundreds of tasks.
+
+## Professional Support / Further Development
+This library was built for an internal project, but we decided to publish it.
+This is why some strings are still hardcoded or there are features which might not seem useful at first glance.
+
+We, at Hochfrequenz, also built a SQLAlchemy+FastAPI+htmx web application around this library in which you can plan and schedule time-critical tasks and projects in the browser.
+It's ready to use, but not pretty enough to publish it yet ;)
+Just ping us if interested.
