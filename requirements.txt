@@ -32,7 +32,7 @@ multidict==6.3.2
     #   yarl
 networkx==3.4.2
     # via your-favourite-package-name (pyproject.toml)
-propcache==0.3.0
+propcache==0.3.1
     # via
     #   aiohttp
     #   yarl
