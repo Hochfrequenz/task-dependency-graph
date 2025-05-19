@@ -36,7 +36,7 @@ propcache==0.3.1
     # via
     #   aiohttp
     #   yarl
-pydantic[email]==2.10.6
+pydantic[email]==2.11.4
     # via
     #   pydantic-settings
     #   your-favourite-package-name (pyproject.toml)
