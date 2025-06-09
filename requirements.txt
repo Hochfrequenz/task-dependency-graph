@@ -40,7 +40,7 @@ pydantic[email]==2.10.6
     # via
     #   pydantic-settings
     #   your-favourite-package-name (pyproject.toml)
-pydantic-core==2.27.2
+pydantic-core==2.34.1
     # via pydantic
 pydantic-settings==2.9.1
     # via your-favourite-package-name (pyproject.toml)
