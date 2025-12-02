@@ -26,7 +26,7 @@ idna==3.10
     # via
     #   email-validator
     #   yarl
-multidict==6.4.4
+multidict==6.7.0
     # via
     #   aiohttp
     #   yarl
