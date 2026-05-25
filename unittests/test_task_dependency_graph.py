@@ -9,7 +9,7 @@ from pydantic import AwareDatetime
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
-from taskdependencygraph.models.task_node_as_artificial_endnode import task_node_as_artificial_endnode
+from taskdependencygraph.models.task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE, task_node_as_artificial_endnode
 from taskdependencygraph.models.task_node_as_artificial_startnode import task_node_as_artificial_startnode
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
@@ -643,7 +643,9 @@ class TestIfListIsCorrectlySortedByStartingTime:
 _T0 = datetime(2024, 6, 1, 8, 0, 0, tzinfo=timezone.utc)
 
 
-def _node(external_id: str, duration_minutes: int, *, milestone: bool = False, earliest_start: datetime | None = None) -> TaskNode:
+def _node(
+    external_id: str, duration_minutes: int, *, milestone: bool = False, earliest_start: datetime | None = None
+) -> TaskNode:
     return TaskNode(
         id=TaskId(uuid.uuid4()),
         external_id=external_id,
@@ -704,6 +706,15 @@ class TestPlannedFinishTimeOfTask:
         with pytest.raises(ValueError):
             tdg.calculate_planned_finish_time_of_task(TaskId(uuid.uuid4()))
 
+    def test_artificial_node_id_raises_value_error(self) -> None:
+        """Artificial node IDs must be rejected — they are not part of the public API."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        with pytest.raises(ValueError):
+            tdg.calculate_planned_finish_time_of_task(task_node_as_artificial_endnode.id)
+        with pytest.raises(ValueError):
+            tdg.calculate_planned_finish_time_of_task(task_node_as_artificial_startnode.id)
+
 
 class TestPlannedFinishTimeOfGraph:
     """Tests for calculate_planned_finish_time_of_graph (issue #84)."""
@@ -716,8 +727,6 @@ class TestPlannedFinishTimeOfGraph:
 
     def test_graph_finish_equals_artificial_endnode_start(self) -> None:
         """Graph finish must equal calculate_planned_starting_time_of_task(ID_OF_ARTIFICIAL_ENDNODE)."""
-        from taskdependencygraph.models.task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE
-
         a = _node("A", 10)
         b = _node("B", 25)
         tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[_edge(a, b)], starting_time_of_run=_T0)
