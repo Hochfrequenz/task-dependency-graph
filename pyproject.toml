@@ -33,10 +33,10 @@ tests = [
     # "syrupy==4.8.2"
 ]
 linting = [
-    "pylint==3.3.7"
+    "pylint==4.0.5"
 ]
 type_check = [
-    "mypy==1.16.0",
+    "mypy==2.1.0",
     "types-docker"
 ]
 spell_check = [
@@ -46,8 +46,8 @@ coverage = [
     "coverage==7.9.1"
 ]
 formatting = [
-    "black==25.1.0",
-    "isort==6.0.1"
+    "black==26.5.1",
+    "isort==8.0.1"
 ]
 packaging = [
     "build==1.2.2.post1",
@@ -64,7 +64,7 @@ Homepage = "https://github.com/Hochfrequenz/task-dependency-graph"
 
 [tool.black]
 line-length = 120
-target_version = ["py311", "py312", "py313"]
+target_version = ["py311", "py312", "py313", "py314"]
 
 [tool.isort]
 line_length = 120
