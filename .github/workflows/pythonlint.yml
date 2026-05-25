@@ -8,6 +8,9 @@ jobs:
   pylint:
     name: Python Code Quality and Lint
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        linter-env: ["linting", "type_check", "spell_check"]
     steps:
       - uses: actions/checkout@v6
       - name: Set up Python 3.14
@@ -18,12 +21,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install tox
-      - name: Run linting via Tox
+      - name: Run ${{ matrix.linter-env }} via Tox
         run: |
-          tox -e linting
-      - name: Run type_check via Tox
-        run: |
-          tox -e type_check
-      - name: Run spell_check via Tox
-        run: |
-          tox -e spell_check
+          tox -e ${{ matrix.linter-env }}
