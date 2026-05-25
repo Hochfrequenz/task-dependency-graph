@@ -9,7 +9,10 @@ from pydantic import AwareDatetime
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
-from taskdependencygraph.models.task_node_as_artificial_endnode import task_node_as_artificial_endnode
+from taskdependencygraph.models.task_node_as_artificial_endnode import (
+    ID_OF_ARTIFICIAL_ENDNODE,
+    task_node_as_artificial_endnode,
+)
 from taskdependencygraph.models.task_node_as_artificial_startnode import task_node_as_artificial_startnode
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
@@ -634,3 +637,109 @@ class TestIfListIsCorrectlySortedByStartingTime:
         for ext_edge, int_edge in zip(digraph.edges, tdg._graph.edges, strict=True):  # pylint:disable=protected-access
             assert ext_edge == int_edge
             assert ext_edge is not int_edge
+
+
+# ---------------------------------------------------------------------------
+# Issue #84 – planned finish time APIs
+# ---------------------------------------------------------------------------
+
+_T0 = datetime(2024, 6, 1, 8, 0, 0, tzinfo=timezone.utc)
+
+
+def _node(
+    external_id: str, duration_minutes: int, *, milestone: bool = False, earliest_start: datetime | None = None
+) -> TaskNode:
+    return TaskNode(
+        id=TaskId(uuid.uuid4()),
+        external_id=external_id,
+        name=external_id,
+        planned_duration=timedelta(minutes=duration_minutes),
+        is_milestone=milestone,
+        earliest_starttime=earliest_start,
+    )
+
+
+def _edge(pred: TaskNode, succ: TaskNode) -> TaskDependencyEdge:
+    return TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=pred.id, task_successor=succ.id)
+
+
+class TestPlannedFinishTimeOfTask:
+    """Tests for calculate_planned_finish_time_of_task (issue #84)."""
+
+    def test_single_task_finish_time(self) -> None:
+        """A single task finishes at start + duration."""
+        task = _node("A", 30)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        expected = _T0 + timedelta(minutes=30)
+        assert tdg.calculate_planned_finish_time_of_task(task.id) == expected
+
+    def test_zero_duration_milestone_finish_equals_start(self) -> None:
+        """A zero-duration milestone finishes exactly at its planned start time."""
+        ms = _node("MS", 0, milestone=True)
+        tdg = TaskDependencyGraph(task_list=[ms], dependency_list=[], starting_time_of_run=_T0)
+        assert tdg.calculate_planned_finish_time_of_task(ms.id) == _T0
+
+    def test_task_on_longer_parallel_path(self) -> None:
+        """The task on the longer parallel path finishes after the task on the shorter path."""
+        short = _node("short", 5)
+        long_ = _node("long", 20)
+        join = _node("join", 10)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, join],
+            dependency_list=[_edge(short, join), _edge(long_, join)],
+            starting_time_of_run=_T0,
+        )
+        # short finishes at T0+5, long finishes at T0+20
+        assert tdg.calculate_planned_finish_time_of_task(short.id) == _T0 + timedelta(minutes=5)
+        assert tdg.calculate_planned_finish_time_of_task(long_.id) == _T0 + timedelta(minutes=20)
+        # join starts after the longer path: T0+20, finishes T0+30
+        assert tdg.calculate_planned_finish_time_of_task(join.id) == _T0 + timedelta(minutes=30)
+
+    def test_earliest_starttime_delays_finish(self) -> None:
+        """A task with earliest_starttime finishes at earliest_starttime + duration."""
+        early = datetime(2024, 6, 1, 10, 0, 0, tzinfo=timezone.utc)  # 2h after T0
+        task = _node("delayed", 15, earliest_start=early)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        assert tdg.calculate_planned_finish_time_of_task(task.id) == early + timedelta(minutes=15)
+
+    def test_unknown_task_id_raises_value_error(self) -> None:
+        """An unrecognised task ID must raise ValueError."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        with pytest.raises(ValueError):
+            tdg.calculate_planned_finish_time_of_task(TaskId(uuid.uuid4()))
+
+    def test_artificial_node_id_raises_value_error(self) -> None:
+        """Artificial node IDs must be rejected — they are not part of the public API."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        with pytest.raises(ValueError):
+            tdg.calculate_planned_finish_time_of_task(task_node_as_artificial_endnode.id)
+        with pytest.raises(ValueError):
+            tdg.calculate_planned_finish_time_of_task(task_node_as_artificial_startnode.id)
+
+
+class TestPlannedFinishTimeOfGraph:
+    """Tests for calculate_planned_finish_time_of_graph (issue #84)."""
+
+    def test_graph_finish_single_task(self) -> None:
+        """Graph with one task finishes at T0 + task duration."""
+        task = _node("A", 45)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        assert tdg.calculate_planned_finish_time_of_graph() == _T0 + timedelta(minutes=45)
+
+    def test_graph_finish_equals_artificial_endnode_start(self) -> None:
+        """Graph finish must equal calculate_planned_starting_time_of_task(ID_OF_ARTIFICIAL_ENDNODE)."""
+        a = _node("A", 10)
+        b = _node("B", 25)
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[_edge(a, b)], starting_time_of_run=_T0)
+        assert tdg.calculate_planned_finish_time_of_graph() == tdg.calculate_planned_starting_time_of_task(
+            ID_OF_ARTIFICIAL_ENDNODE
+        )
+
+    def test_graph_finish_parallel_paths_takes_longer(self) -> None:
+        """Graph finish is determined by the longest path."""
+        short = _node("short", 5)
+        long_ = _node("long", 40)
+        tdg = TaskDependencyGraph(task_list=[short, long_], dependency_list=[], starting_time_of_run=_T0)
+        assert tdg.calculate_planned_finish_time_of_graph() == _T0 + timedelta(minutes=40)
