@@ -8,7 +8,6 @@ For more information: see app/core/task_dependency_graph/task_dependency_graph.p
 --> add_artificial_nodes_and_edges
 """
 
-
 from datetime import timedelta
 from uuid import UUID
 

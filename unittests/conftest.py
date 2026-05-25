@@ -3,9 +3,9 @@ from typing import AsyncGenerator, Generator
 import pytest
 from docker.errors import DockerException
 from pydantic import HttpUrl
-from testcontainers.core.container import DockerContainer  # type:ignore[import-untyped]
-from testcontainers.core.network import Network  # type:ignore[import-untyped]
-from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for_logs  # type:ignore[import-untyped]
+from testcontainers.core.container import DockerContainer  # type: ignore[import-untyped]
+from testcontainers.core.network import Network  # type: ignore[import-untyped]
+from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for_logs  # type: ignore[import-untyped]
 
 from taskdependencygraph.plotting.kroki import KrokiClient, KrokiConfig
 
