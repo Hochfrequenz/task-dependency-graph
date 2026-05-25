@@ -7,22 +7,23 @@ on:
 jobs:
   pylint:
     name: Python Code Quality and Lint
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        python-version: ["3.13"]
-        os: [ubuntu-latest]
-        linter-env: ["linting", "type_check", "spell_check"]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.14
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.14"
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           pip install tox
-      - name: Run ${{ matrix.linter-env }} via Tox
+      - name: Run linting via Tox
         run: |
-          tox -e ${{ matrix.linter-env }}
+          tox -e linting
+      - name: Run type_check via Tox
+        run: |
+          tox -e type_check
+      - name: Run spell_check via Tox
+        run: |
+          tox -e spell_check
