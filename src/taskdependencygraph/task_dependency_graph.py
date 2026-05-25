@@ -76,7 +76,7 @@ class TaskDependencyGraph:
               | \
               |  \
              (B)  \
-            /   \  \ 
+            /   \  \
           (C)   (D) \
                  |  (F)
                 (E)
@@ -454,6 +454,30 @@ class TaskDependencyGraph:
         if own_earliest_start is None:
             return starting_time_of_task
         return max(starting_time_of_task, own_earliest_start)
+
+    def calculate_planned_finish_time_of_task(self, task_id: TaskId) -> AwareDatetime:
+        """
+        Returns the planned finish time of a task: its planned start time plus its planned duration.
+
+        For a zero-duration milestone the finish time equals the start time.
+        Raises ValueError if task_id is not a real task in this graph (unknown or artificial node IDs are rejected).
+        """
+        if task_id not in self._graph.nodes or task_id in {
+            task_node_as_artificial_startnode.id,
+            task_node_as_artificial_endnode.id,
+        }:
+            raise ValueError(f"Task with id {task_id!r} is not a real task in this graph")
+        task: TaskNode = self._graph.nodes[task_id]["domain_model"]
+        return self.calculate_planned_starting_time_of_task(task_id) + task.planned_duration
+
+    def calculate_planned_finish_time_of_graph(self) -> AwareDatetime:
+        """
+        Returns the planned finish time of the entire graph — the moment the last task completes.
+
+        Equivalent to the planned start time of the internal artificial end node, without requiring
+        callers to import or know about ID_OF_ARTIFICIAL_ENDNODE.
+        """
+        return self.calculate_planned_starting_time_of_task(task_node_as_artificial_endnode.id)
 
     def create_list_of_task_node_copies_with_planned_starting_time(self) -> list[TaskNode]:
         """
