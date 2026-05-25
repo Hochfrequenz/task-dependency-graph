@@ -9,7 +9,10 @@ from pydantic import AwareDatetime
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
-from taskdependencygraph.models.task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE, task_node_as_artificial_endnode
+from taskdependencygraph.models.task_node_as_artificial_endnode import (
+    ID_OF_ARTIFICIAL_ENDNODE,
+    task_node_as_artificial_endnode,
+)
 from taskdependencygraph.models.task_node_as_artificial_startnode import task_node_as_artificial_startnode
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
