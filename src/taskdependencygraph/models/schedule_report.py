@@ -3,8 +3,9 @@ Schedule report models: ScheduleEntry and ScheduleReport.
 """
 
 from datetime import timedelta
+from typing import Annotated
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from taskdependencygraph.models.ids import TaskId
 
@@ -18,7 +19,7 @@ class ScheduleEntry(BaseModel):
     external_id: str
     name: str
     phase: str | None
-    tags: list[str] | None
+    tags: list[Annotated[str, Field(min_length=1)]] | None
     planned_start: AwareDatetime
     planned_finish: AwareDatetime
     planned_duration: timedelta
@@ -37,6 +38,7 @@ class ScheduleReport(BaseModel):
     graph_finish: AwareDatetime
     total_duration: timedelta
     critical_path_task_ids: list[TaskId]
+    """Ordered list of task IDs on the critical path, from graph start to graph finish."""
     entries: list[ScheduleEntry]
 
 

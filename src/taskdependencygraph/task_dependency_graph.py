@@ -533,17 +533,26 @@ class TaskDependencyGraph:
         critical_path_ids = self.get_critical_path_task_ids(include_artificial_nodes=include_artificial_nodes)
         critical_path_set = set(critical_path_ids)
 
+        # Pre-compute all start times once to avoid repeated DAG traversals inside sort keys.
+        start_cache: dict[TaskId, AwareDatetime] = {
+            tid: self.calculate_planned_starting_time_of_task(tid) for tid in self._graph.nodes
+        }
+
         def _task_sort_key(tid: TaskId) -> tuple[AwareDatetime, str, str]:
             task: TaskNode = self._graph.nodes[tid]["domain_model"]
-            return (self.calculate_planned_starting_time_of_task(tid), task.external_id, task.name)
+            return (start_cache[tid], task.external_id, task.name)
 
         entries: list[ScheduleEntry] = []
         for task_id in self._graph.nodes:
             if not include_artificial_nodes and task_id in _ARTIFICIAL_NODE_IDS:
                 continue
             task: TaskNode = self._graph.nodes[task_id]["domain_model"]
-            planned_start = self.calculate_planned_starting_time_of_task(task_id)
-            planned_finish = planned_start + task.planned_duration
+            planned_start = start_cache[task_id]
+            planned_finish = (
+                self.calculate_planned_finish_time_of_task(task_id)
+                if task_id not in _ARTIFICIAL_NODE_IDS
+                else planned_start + task.planned_duration
+            )
 
             predecessor_ids = sorted(
                 [

@@ -1030,3 +1030,26 @@ class TestScheduleReport:
         assert report.graph_finish == _T0 + timedelta(minutes=30)
         assert report.total_duration == timedelta(minutes=30)
         assert report.critical_path_task_ids == tdg.get_critical_path_task_ids()
+
+    def test_include_artificial_nodes_flag(self) -> None:
+        """With include_artificial_nodes=True artificial nodes appear in entries and boundary ID lists."""
+        a = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[a], dependency_list=[], starting_time_of_run=_T0)
+        report = tdg.create_schedule_report(include_artificial_nodes=True)
+        entry_ids = {e.task_id for e in report.entries}
+        assert ID_OF_ARTIFICIAL_STARTNODE in entry_ids
+        assert ID_OF_ARTIFICIAL_ENDNODE in entry_ids
+        # The real task's predecessor list should include the artificial start
+        by_id = {e.task_id: e for e in report.entries}
+        assert ID_OF_ARTIFICIAL_STARTNODE in by_id[a.id].predecessor_task_ids
+        assert ID_OF_ARTIFICIAL_ENDNODE in by_id[a.id].successor_task_ids
+
+    def test_earliest_starttime_respected_in_report(self) -> None:
+        """A task with earliest_starttime has its delayed planned_start and planned_finish in the report."""
+        early = datetime(2024, 6, 1, 10, 0, 0, tzinfo=timezone.utc)  # T0 + 2h
+        a = _node("A", 30, earliest_start=early)
+        tdg = TaskDependencyGraph(task_list=[a], dependency_list=[], starting_time_of_run=_T0)
+        report = tdg.create_schedule_report()
+        entry = report.entries[0]
+        assert entry.planned_start == early
+        assert entry.planned_finish == early + timedelta(minutes=30)
