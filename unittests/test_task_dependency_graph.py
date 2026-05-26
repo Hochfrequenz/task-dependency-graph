@@ -1686,3 +1686,59 @@ class TestPublicApiImports:
         """AddNodeToGraphPreviewResponse and AddEdgeToGraphPreviewResponse are importable from top-level."""
         assert tdg_pkg.AddNodeToGraphPreviewResponse is AddNodeToGraphPreviewResponse
         assert tdg_pkg.AddEdgeToGraphPreviewResponse is AddEdgeToGraphPreviewResponse
+
+
+class TestExtractSubgraphErrorMessages:
+    """Error message formatting for extract_sub_graph — both start and end node errors use (parentheses)."""
+
+    def test_end_not_milestone_error_message_contains_parentheses(self) -> None:
+        full_graph = copy.deepcopy(graph_ferdinand_with_milestones)
+        # task_S_milestone is a valid milestone start; task_T is not a milestone
+        with pytest.raises(ValueError) as raised:
+            _ = full_graph.extract_sub_graph(task_S_milestone.id, task_T.id)
+        assert "(end) is not a milestone" in str(raised.value)
+        assert str(task_T.id) in str(raised.value)
+
+    def test_start_not_milestone_error_message_contains_parentheses(self) -> None:
+        full_graph = copy.deepcopy(graph_ferdinand_with_milestones)
+        # task_T is not a milestone
+        with pytest.raises(ValueError) as raised:
+            _ = full_graph.extract_sub_graph(task_T.id, task_W_milestone.id)
+        assert "(start) is not a milestone" in str(raised.value)
+        assert str(task_T.id) in str(raised.value)
+
+
+class TestToDot:
+    """Direct unit tests for TaskDependencyGraph.to_dot() — verifies structure and edge direction."""
+
+    def test_output_starts_with_digraph(self) -> None:
+        graph = copy.deepcopy(graph_ferdinand_with_milestones)
+        dot = graph.to_dot()
+        assert dot.startswith("digraph fahrplan{")
+
+    def test_output_ends_with_closing_brace(self) -> None:
+        graph = copy.deepcopy(graph_ferdinand_with_milestones)
+        dot = graph.to_dot()
+        assert dot.strip().endswith("}")
+
+    def test_output_contains_node_entries(self) -> None:
+        graph = copy.deepcopy(graph_ferdinand_with_milestones)
+        dot = graph.to_dot()
+        assert f'id="svg-{task_S_milestone.id}"' in dot
+
+    def test_output_contains_edges_in_correct_direction(self) -> None:
+        tdg = TaskDependencyGraph(
+            task_list=[task_M, task_N],
+            dependency_list=[
+                TaskDependencyEdge(
+                    id=TaskDependencyId(uuid.uuid4()),
+                    task_predecessor=task_M.id,
+                    task_successor=task_N.id,
+                )
+            ],
+            starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+        )
+        dot = tdg.to_dot()
+        # edge must be rendered predecessor → successor, not the other way around
+        assert f'"{task_M.id}" -> "{task_N.id}"' in dot
+        assert f'"{task_N.id}" -> "{task_M.id}"' not in dot
