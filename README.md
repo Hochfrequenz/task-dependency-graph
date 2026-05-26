@@ -100,11 +100,11 @@ tdg = TaskDependencyGraph(
 
 Once you have a graph, you can:
 
-* **Validate the definition** before construction — `TaskDependencyGraph.validate_definition(task_list, dependency_list)` checks for duplicate IDs, missing edge endpoints, and cycles, returning a `GraphDefinitionValidationResult`.
+* **Validate the definition** before construction — `TaskDependencyGraph.validate_definition(task_list, dependency_list)` checks for duplicate task/dependency IDs, duplicate external IDs, missing edge endpoints, invalid milestone durations, duplicate edge pairs, and cycles, returning a `GraphDefinitionValidationResult`.
 * **Get the full schedule** — `tdg.create_schedule_report()` returns a `ScheduleReport` with planned start/finish, critical-path flag, and total slack for every task.
-* **Inspect the critical path** — `tdg.get_critical_path_tasks()` returns the ordered list of `TaskNode` objects whose delay would push out the project end.
+* **Inspect the critical path** — `tdg.get_critical_path_tasks()` returns the ordered list of `TaskNode` objects on the critical path.
 * **Calculate total slack** — `tdg.calculate_total_slack_of_task(task_id)` returns how much a task can slip without affecting the deadline.
-* **Query finish times** — `tdg.get_planned_finish_time_of_task(task_id)` and `tdg.get_planned_finish_time_of_graph()`.
+* **Query finish times** — `tdg.calculate_planned_finish_time_of_task(task_id)` and `tdg.calculate_planned_finish_time_of_graph()`.
 * Assign persons to tasks and check if any person has more than one task assigned at a time.
 
 Find a complete working example in [the demo unittest](unittests/test_demonstration.py).
