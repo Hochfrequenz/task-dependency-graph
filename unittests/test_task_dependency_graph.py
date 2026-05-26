@@ -6,12 +6,14 @@ import networkx as nx  # type: ignore[import-untyped]
 import pytest
 from pydantic import AwareDatetime, ValidationError
 
+import taskdependencygraph.models as tdg_models
 from taskdependencygraph.models.graph_definition_validation import (
     ValidationCode,
 )
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
+from taskdependencygraph.models.task_execution_status import TaskExecutionStatus
 from taskdependencygraph.models.task_node import TaskNode
 from taskdependencygraph.models.task_node_as_artificial_endnode import (
     ID_OF_ARTIFICIAL_ENDNODE,
@@ -1503,3 +1505,129 @@ class TestMermaidGanttConfigValidation:
         """All supported Mermaid tick_interval unit variants are accepted."""
         cfg = MermaidGanttConfig(tick_interval=interval)
         assert cfg.tick_interval == interval
+
+
+# ---------------------------------------------------------------------------
+
+
+class TestTaskNodeExecutionStatus:
+    """Tests for the optional execution_status field on TaskNode (issue #90)."""
+
+    def test_task_node_defaults_to_no_execution_status(self) -> None:
+        """TaskNode can be constructed without providing execution_status; it defaults to None."""
+        task = _node("A", 10)
+        assert task.execution_status is None
+
+    def test_task_node_accepts_each_execution_status_value(self) -> None:
+        """TaskNode accepts every TaskExecutionStatus variant when explicitly provided."""
+        for status in TaskExecutionStatus:
+            task = TaskNode(
+                id=TaskId(uuid.uuid4()),
+                external_id="X",
+                name="Task X",
+                planned_duration=timedelta(minutes=10),
+                execution_status=status,
+            )
+            assert task.execution_status is status
+
+    def test_execution_status_does_not_affect_planned_start(self) -> None:
+        """execution_status has no effect on the computed planned_starting_time."""
+        base = _node("A", 30)
+        with_status = TaskNode(
+            id=base.id,
+            external_id=base.external_id,
+            name=base.name,
+            planned_duration=base.planned_duration,
+            execution_status=TaskExecutionStatus.STARTED,
+        )
+        tdg_base = TaskDependencyGraph(task_list=[base], dependency_list=[], starting_time_of_run=_T0)
+        tdg_status = TaskDependencyGraph(task_list=[with_status], dependency_list=[], starting_time_of_run=_T0)
+        report_base = tdg_base.create_schedule_report()
+        report_status = tdg_status.create_schedule_report()
+        entries_base = [e for e in report_base.entries if e.task_id == base.id]
+        entries_status = [e for e in report_status.entries if e.task_id == with_status.id]
+        assert entries_base[0].planned_start == entries_status[0].planned_start
+
+    def test_execution_status_does_not_affect_critical_path(self) -> None:
+        """execution_status has no effect on whether a task is on the critical path."""
+        a = _node("A", 10)
+        b = _node("B", 20)
+        a_completed = TaskNode(
+            id=a.id,
+            external_id=a.external_id,
+            name=a.name,
+            planned_duration=a.planned_duration,
+            execution_status=TaskExecutionStatus.COMPLETED,
+        )
+        tdg_no_status = TaskDependencyGraph(task_list=[a, b], dependency_list=[_edge(a, b)], starting_time_of_run=_T0)
+        tdg_with_status = TaskDependencyGraph(
+            task_list=[a_completed, b], dependency_list=[_edge(a_completed, b)], starting_time_of_run=_T0
+        )
+        assert tdg_no_status.get_critical_path_task_ids() == tdg_with_status.get_critical_path_task_ids()
+
+    def test_execution_status_does_not_affect_validation(self) -> None:
+        """execution_status does not cause or suppress graph definition findings."""
+        a = _node("A", 10)
+        a_with_status = TaskNode(
+            id=a.id,
+            external_id=a.external_id,
+            name=a.name,
+            planned_duration=a.planned_duration,
+            execution_status=TaskExecutionStatus.NOT_YET_REQUESTED,
+        )
+        result_no_status = TaskDependencyGraph.validate_definition(task_list=[a], dependency_list=[])
+        result_with_status = TaskDependencyGraph.validate_definition(task_list=[a_with_status], dependency_list=[])
+        assert result_no_status.findings == result_with_status.findings
+
+    def test_task_node_with_execution_status_is_hashable(self) -> None:
+        """TaskNode with an execution_status can be used as a dict key (hashability is intact)."""
+        task = TaskNode(
+            id=TaskId(uuid.uuid4()),
+            external_id="H",
+            name="Hashable Task",
+            planned_duration=timedelta(minutes=5),
+            execution_status=TaskExecutionStatus.REQUESTED,
+        )
+        d = {task: "value"}
+        assert d[task] == "value"
+
+    def test_milestone_docstring_does_not_imply_mandatory_execution_status(self) -> None:
+        """A milestone can be constructed without execution_status; the field remains optional."""
+        ms = TaskNode(
+            id=TaskId(uuid.uuid4()),
+            external_id="MS1",
+            name="Milestone 1",
+            planned_duration=timedelta(0),
+            is_milestone=True,
+        )
+        assert ms.execution_status is None
+
+    def test_execution_status_exported_from_models(self) -> None:
+        """TaskExecutionStatus is accessible via the top-level taskdependencygraph.models package."""
+        assert tdg_models.TaskExecutionStatus is TaskExecutionStatus
+
+    def test_execution_status_round_trips_through_pydantic_serialisation(self) -> None:
+        """execution_status survives model_dump / model_validate round-trip as a StrEnum."""
+        task = TaskNode(
+            id=TaskId(uuid.uuid4()),
+            external_id="RT",
+            name="Round-trip Task",
+            planned_duration=timedelta(minutes=15),
+            execution_status=TaskExecutionStatus.OBSOLETE,
+        )
+        dumped = task.model_dump()
+        restored = TaskNode.model_validate(dumped)
+        assert restored.execution_status is TaskExecutionStatus.OBSOLETE
+
+    def test_execution_status_does_not_appear_in_dot_output(self) -> None:
+        """execution_status value is not leaked into the DOT representation of a task."""
+        task = TaskNode(
+            id=TaskId(uuid.uuid4()),
+            external_id="D",
+            name="Dot Task",
+            planned_duration=timedelta(minutes=10),
+            execution_status=TaskExecutionStatus.STARTED,
+        )
+        dot = task.to_dot({"label": "Dot Task", "color": "blue"})
+        assert "STARTED" not in dot
+        assert "execution_status" not in dot
