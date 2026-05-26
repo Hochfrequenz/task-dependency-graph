@@ -98,7 +98,9 @@ class TaskDependencyGraph:
                 findings.append(
                     GraphDefinitionValidationFinding(
                         code=ValidationCode.INVALID_MILESTONE_DURATION,
-                        message=f"Milestone {task.external_id!r} has non-zero planned duration: {task.planned_duration}",
+                        message=(
+                            f"Milestone {task.external_id!r} has non-zero planned duration: {task.planned_duration}"
+                        ),
                         task_id=task.id,
                     )
                 )
