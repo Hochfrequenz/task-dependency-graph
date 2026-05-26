@@ -35,7 +35,7 @@ def start_kroki_on_localhost(docker_network: Network) -> Generator[int, None, No
     Starts Kroki and Mermaid containers.
     Yields the exposed kroki port.
     """
-    kroki = DockerContainer("yuzutech/kroki:0.24.1")
+    kroki = DockerContainer("yuzutech/kroki:0.30.1")
     kroki.with_network(docker_network)
     mermaid = DockerContainer("yuzutech/kroki-mermaid")
     mermaid.with_network(docker_network)
