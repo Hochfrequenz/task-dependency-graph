@@ -19,8 +19,8 @@ from taskdependencygraph.models.graph_definition_validation import (
     GraphDefinitionValidationResult,
     ValidationCode,
 )
-from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
+from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
 from taskdependencygraph.models.schedule_report import ScheduleEntry, ScheduleReport
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_dependency_update import (
