@@ -4,7 +4,7 @@ interface like descriptions for any kind of plotting "client" library
 
 from typing import Literal, Protocol
 
-from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
+from taskdependencygraph.models import MermaidGanttConfig
 
 PlotMode = Literal["dot", "gantt"]
 

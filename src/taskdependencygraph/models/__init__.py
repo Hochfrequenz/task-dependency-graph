@@ -12,8 +12,8 @@ from .schedule_report import ScheduleEntry, ScheduleReport
 from .task_dependency_edge import TaskDependencyEdge
 from .task_execution_status import TaskExecutionStatus
 from .task_node import TaskNode
-from .task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE
-from .task_node_as_artificial_startnode import ID_OF_ARTIFICIAL_STARTNODE
+from .task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE, task_node_as_artificial_endnode
+from .task_node_as_artificial_startnode import ID_OF_ARTIFICIAL_STARTNODE, task_node_as_artificial_startnode
 
 __all__ = [
     "MermaidGanttConfig",
@@ -34,4 +34,6 @@ __all__ = [
     "TaskExecutionStatus",
     "ID_OF_ARTIFICIAL_ENDNODE",
     "ID_OF_ARTIFICIAL_STARTNODE",
+    "task_node_as_artificial_endnode",
+    "task_node_as_artificial_startnode",
 ]

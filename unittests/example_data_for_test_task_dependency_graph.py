@@ -8,9 +8,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime
 
-from taskdependencygraph.models.ids import TaskDependencyId, TaskId
-from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
-from taskdependencygraph.models.task_node import TaskNode
+from taskdependencygraph.models import TaskDependencyEdge, TaskDependencyId, TaskId, TaskNode
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
 starting_time_of_run_1 = datetime(year=2024, month=3, day=12, hour=12, minute=10, tzinfo=timezone.utc)
