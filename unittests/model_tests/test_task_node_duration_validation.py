@@ -60,6 +60,8 @@ class TestPlannedDurationOfPredecessorTasks:
 
 class TestNoDeprecationWarnings:
     def test_constructing_task_node_emits_no_pydantic_deprecation_warnings(self) -> None:
+        # Passes implicitly if no warning is raised; PydanticDeprecatedSince20 inherits
+        # from DeprecationWarning, which simplefilter("error") converts to an exception.
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             _make_task(planned_duration=timedelta(minutes=5))
