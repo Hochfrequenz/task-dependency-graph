@@ -860,7 +860,7 @@ class TaskDependencyGraph:
         if not self._graph.nodes[sub_start]["domain_model"].is_milestone:
             raise ValueError(f"Node with id {sub_start} (start) is not a milestone")
         if not self._graph.nodes[sub_end]["domain_model"].is_milestone:
-            raise ValueError(f"Node with id {sub_end} end is not a milestone")
+            raise ValueError(f"Node with id {sub_end} (end) is not a milestone")
         if not nx.has_path(self._graph, sub_start, sub_end):
             raise ValueError(f"There is no path between {sub_start} and {sub_end}")
 
