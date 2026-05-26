@@ -1,5 +1,10 @@
 """models are python objects which we use to model tasks, dependencies and the graph they form"""
 
+from .graph_definition_validation import (
+    GraphDefinitionValidationFinding,
+    GraphDefinitionValidationResult,
+    ValidationCode,
+)
 from .ids import PersonId, RunGroupId, RunGroupPersonRelationId, RunId, TaskDependencyId, TaskId
 from .person import Person
 from .schedule_report import ScheduleEntry, ScheduleReport
@@ -10,6 +15,9 @@ from .task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE
 from .task_node_as_artificial_startnode import ID_OF_ARTIFICIAL_STARTNODE
 
 __all__ = [
+    "GraphDefinitionValidationFinding",
+    "GraphDefinitionValidationResult",
+    "ValidationCode",
     "Person",
     "RunId",
     "RunGroupId",
