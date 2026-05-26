@@ -15,7 +15,7 @@ from taskdependencygraph.models.ids import TaskId
 from taskdependencygraph.models.task_node import TaskNode
 
 
-def _make_task(**kwargs) -> TaskNode:
+def _make_task(**kwargs: Any) -> TaskNode:
     defaults: dict[str, Any] = {
         "id": TaskId(uuid.uuid4()),
         "external_id": "T1",
