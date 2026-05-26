@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import networkx as nx  # type: ignore[import-untyped]
 import pytest
-from pydantic import AwareDatetime
+from pydantic import AwareDatetime, ValidationError
 
 from taskdependencygraph.models.graph_definition_validation import (
     ValidationCode,
@@ -1436,3 +1436,63 @@ class TestMermaidGanttConfig:
         alpha_pos = output.index("section Alpha")
         beta_pos = output.index("section Beta")
         assert alpha_pos < beta_pos
+
+    def test_multiple_configs_each_produce_valid_charts(self) -> None:
+        """Creating several config instances and generating charts from each all succeed."""
+        a = _node("A", 10)
+        b = _node("B", 20)
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[_edge(a, b)], starting_time_of_run=_T0)
+        configs = [
+            MermaidGanttConfig(),
+            MermaidGanttConfig(title="Project X", tick_interval="1hour"),
+            MermaidGanttConfig(axis_format="%H:%M", section_label="Stream A", group_by_phase=False),
+        ]
+        for cfg in configs:
+            output = tdg.to_mermaid_gantt(cfg)
+            assert output.startswith("gantt\n")
+            assert f"title {cfg.title}" in output
+            assert f"tickInterval {cfg.tick_interval}" in output
+
+    def test_empty_title_raises_validation_error(self) -> None:
+        """An empty title string is rejected at construction time."""
+        with pytest.raises(ValidationError):
+            MermaidGanttConfig(title="")
+
+    def test_empty_date_format_raises_validation_error(self) -> None:
+        """An empty date_format string is rejected at construction time."""
+        with pytest.raises(ValidationError):
+            MermaidGanttConfig(date_format="")
+
+    def test_empty_axis_format_raises_validation_error(self) -> None:
+        """An empty axis_format string is rejected at construction time."""
+        with pytest.raises(ValidationError):
+            MermaidGanttConfig(axis_format="")
+
+    def test_empty_section_label_raises_validation_error(self) -> None:
+        """An empty section_label string is rejected at construction time."""
+        with pytest.raises(ValidationError):
+            MermaidGanttConfig(section_label="")
+
+    def test_invalid_tick_interval_raises_validation_error(self) -> None:
+        """A tick_interval that doesn't match the Mermaid pattern is rejected at construction time."""
+        with pytest.raises(ValidationError):
+            MermaidGanttConfig(tick_interval="notaninterval")
+
+    def test_tick_interval_missing_number_raises_validation_error(self) -> None:
+        """A tick_interval without a leading integer is rejected at construction time."""
+        with pytest.raises(ValidationError):
+            MermaidGanttConfig(tick_interval="hour")
+
+    def test_tick_interval_plural_unit_is_accepted(self) -> None:
+        """tick_interval values with plural units (e.g. '30minutes') are accepted."""
+        cfg = MermaidGanttConfig(tick_interval="30minutes")
+        assert cfg.tick_interval == "30minutes"
+
+    @pytest.mark.parametrize(
+        "interval",
+        ["1millisecond", "5seconds", "15minute", "1hour", "2hours", "1day", "1week", "1month"],
+    )
+    def test_valid_tick_intervals_are_accepted(self, interval: str) -> None:
+        """All supported Mermaid tick_interval unit variants are accepted."""
+        cfg = MermaidGanttConfig(tick_interval=interval)
+        assert cfg.tick_interval == interval
