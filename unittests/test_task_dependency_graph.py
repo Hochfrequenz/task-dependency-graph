@@ -816,14 +816,33 @@ class TestGetCriticalPathTaskIds:
         assert ids[-1] == ID_OF_ARTIFICIAL_ENDNODE
 
     def test_tie_behavior_is_deterministic(self) -> None:
-        """Equal-length parallel paths produce a deterministic (NetworkX-ordered) result."""
+        """Equal-length parallel paths produce a deterministic (NetworkX-ordered) result.
+
+        NetworkX picks the path whose first differing node was inserted into the graph first,
+        which is `a` here. Two calls on the same graph must return the same list.
+        """
         a = _node("A", 10)
         b = _node("B", 10)
         tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[], starting_time_of_run=_T0)
         ids1 = tdg.get_critical_path_task_ids()
         ids2 = tdg.get_critical_path_task_ids()
-        assert ids1 == ids2  # same graph, same result every call
-        assert len(ids1) == 1  # only one task in the path (both have equal weight; NetworkX picks one)
+        assert ids1 == ids2
+        assert ids1 == [a.id]  # first-inserted node wins the tie
+
+    def test_empty_task_list_returns_empty_path(self) -> None:
+        """A graph with no real tasks returns an empty critical path."""
+        tdg = TaskDependencyGraph(task_list=[], dependency_list=[], starting_time_of_run=_T0)
+        assert tdg.get_critical_path_task_ids() == []
+
+    def test_earliest_starttime_stretches_onto_critical_path(self) -> None:
+        """A task delayed by earliest_starttime gets a stretched edge weight, pushing it onto the path."""
+        a = _node("A", 10)  # finishes at T0+10min, path weight 10
+        early = datetime(2024, 6, 1, 9, 0, 0, tzinfo=timezone.utc)  # T0 + 60min
+        b = _node("B", 10, earliest_start=early)  # edge stretched to 60min, path weight 70
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[], starting_time_of_run=_T0)
+        ids = tdg.get_critical_path_task_ids()
+        assert b.id in ids
+        assert a.id not in ids
 
 
 class TestGetCriticalPathTasks:
@@ -857,3 +876,19 @@ class TestGetCriticalPathTasks:
         tasks = tdg.get_critical_path_tasks(include_artificial_nodes=True)
         assert tasks[0].id == ID_OF_ARTIFICIAL_STARTNODE
         assert tasks[-1].id == ID_OF_ARTIFICIAL_ENDNODE
+
+    def test_parallel_paths_longer_path_wins(self) -> None:
+        """TaskNode objects on the longer parallel path are returned, not the shorter one."""
+        short = _node("short", 5)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, end],
+            dependency_list=[_edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        tasks = tdg.get_critical_path_tasks()
+        task_ids = [t.id for t in tasks]
+        assert long_.id in task_ids
+        assert end.id in task_ids
+        assert short.id not in task_ids

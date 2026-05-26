@@ -11,7 +11,7 @@ from itertools import pairwise
 from typing import Literal, Mapping
 
 import networkx as nx  # type: ignore[import-untyped]
-from networkx import DiGraph, dag_longest_path_length
+from networkx import DiGraph, dag_longest_path, dag_longest_path_length
 from pydantic import AwareDatetime
 
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
@@ -23,6 +23,10 @@ from taskdependencygraph.models.task_dependency_update import (
 from taskdependencygraph.models.task_node import TaskNode
 from taskdependencygraph.models.task_node_as_artificial_endnode import task_node_as_artificial_endnode
 from taskdependencygraph.models.task_node_as_artificial_startnode import task_node_as_artificial_startnode
+
+_ARTIFICIAL_NODE_IDS: frozenset[TaskId] = frozenset(
+    {task_node_as_artificial_startnode.id, task_node_as_artificial_endnode.id}
+)
 
 
 class TaskDependencyGraph:
@@ -281,7 +285,7 @@ class TaskDependencyGraph:
         With this method it can be checked if a task is on the overall critical path, i.e. on the longest path
         between the first task and last task of this run.
         """
-        longest_path = nx.dag_longest_path(self._graph, weight="weight")  # The weight of the edge is the duration
+        longest_path = dag_longest_path(self._graph, weight="weight")  # The weight of the edge is the duration
         # of the task predecessor.
         # The longest path is the path, the sum of whose task durations is the greatest.
         # The longest_path is a list of their task ids as keys.
@@ -462,10 +466,7 @@ class TaskDependencyGraph:
         For a zero-duration milestone the finish time equals the start time.
         Raises ValueError if task_id is not a real task in this graph (unknown or artificial node IDs are rejected).
         """
-        if task_id not in self._graph.nodes or task_id in {
-            task_node_as_artificial_startnode.id,
-            task_node_as_artificial_endnode.id,
-        }:
+        if task_id not in self._graph.nodes or task_id in _ARTIFICIAL_NODE_IDS:
             raise ValueError(f"Task with id {task_id!r} is not a real task in this graph")
         task: TaskNode = self._graph.nodes[task_id]["domain_model"]
         return self.calculate_planned_starting_time_of_task(task_id) + task.planned_duration
@@ -474,20 +475,26 @@ class TaskDependencyGraph:
         """
         Returns the ordered list of task IDs on the critical path, from graph start to graph finish.
 
-        The path is determined by the same weighted-DAG semantics used by is_on_critical_path.
-        When multiple paths share the same total duration (tie), the result follows NetworkX's
-        deterministic graph-ordering: the path whose nodes appear earliest in insertion order wins.
-        Use a separate get_critical_path_task_id_paths() API (not yet implemented) if all tied
-        paths are needed.
+        Uses the same weighted-DAG semantics as is_on_critical_path: each directed edge carries the
+        duration of its predecessor node as weight. Tasks with an earliest_starttime may cause their
+        incoming edge weight to be stretched beyond the raw predecessor duration (see
+        _stretch_edges_with_successor_that_has_fixed_start), so wall-clock delays are reflected.
+
+        Tie-breaking: when multiple paths share the same total weight, the result follows NetworkX's
+        deterministic graph-insertion order (the path whose first differing node was inserted first
+        wins). Use a separate get_critical_path_task_id_paths() API (not yet implemented) if all
+        tied paths are needed.
+
+        Note: is_on_critical_path() does not filter artificial nodes, so calling it with an
+        artificial node ID may return True while that ID is absent from the default output here.
 
         By default artificial start/end node IDs are excluded. Pass include_artificial_nodes=True
         to include them (useful for debugging or advanced consumers).
         """
-        path: list[TaskId] = nx.dag_longest_path(self._graph, weight="weight")
+        path: list[TaskId] = dag_longest_path(self._graph, weight="weight")
         if include_artificial_nodes:
             return path
-        artificial = {task_node_as_artificial_startnode.id, task_node_as_artificial_endnode.id}
-        return [tid for tid in path if tid not in artificial]
+        return [tid for tid in path if tid not in _ARTIFICIAL_NODE_IDS]
 
     def get_critical_path_tasks(self, include_artificial_nodes: bool = False) -> list[TaskNode]:
         """
@@ -519,7 +526,7 @@ class TaskDependencyGraph:
         new_task_list = []
 
         for task_id in self._graph.nodes:
-            if task_id in {task_node_as_artificial_startnode.id, task_node_as_artificial_endnode.id}:
+            if task_id in _ARTIFICIAL_NODE_IDS:
                 continue
             task = self._graph.nodes[task_id]["domain_model"]
             copied_task = task.model_copy(
