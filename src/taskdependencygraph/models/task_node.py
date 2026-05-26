@@ -9,6 +9,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from taskdependencygraph.models.ids import TaskId
 from taskdependencygraph.models.person import Person
+from taskdependencygraph.models.task_execution_status import TaskExecutionStatus
 
 
 class TaskNode(BaseModel):
@@ -75,8 +76,13 @@ class TaskNode(BaseModel):
     is_milestone: bool = False
     """
     Expresses if a task is a milestone.
-    Milestones are Pseudo-Tasks with duration = 0 and execution_status = COMPLETED.
-    It begins and ends a phase.
+    Milestones are pseudo-tasks with duration = 0 that mark phase boundaries.
+    """
+
+    execution_status: TaskExecutionStatus | None = None
+    """
+    Optional metadata for consumers that track task execution state.
+    Does not affect scheduling, dependency validation, critical-path calculation, or visualization.
     """
 
     earliest_starttime: AwareDatetime | None = None
