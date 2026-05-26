@@ -725,6 +725,9 @@ class TaskDependencyGraph:
 
         Raises ValueError for unknown task IDs and for the internal artificial start/end nodes,
         which are not part of the public API.
+
+        Note: each call runs a full backward pass (O(V+E)). For bulk queries over all tasks,
+        prefer create_schedule_report() which amortises the backward pass across all entries.
         """
         if task_id not in self._graph.nodes or task_id in _ARTIFICIAL_NODE_IDS:
             raise ValueError(f"Task with id {task_id!r} is not a real task in this graph")
@@ -777,9 +780,6 @@ class TaskDependencyGraph:
                 if task_id not in _ARTIFICIAL_NODE_IDS
                 else planned_start + task.planned_duration
             )
-            earliest_start = planned_start - self._starting_time_of_run
-            total_slack = latest_start_cache[task_id] - earliest_start
-
             predecessor_ids = sorted(
                 [
                     pid
@@ -809,7 +809,7 @@ class TaskDependencyGraph:
                     planned_duration=task.planned_duration,
                     is_milestone=task.is_milestone,
                     is_on_critical_path=task_id in critical_path_set,
-                    total_slack=total_slack,
+                    total_slack=latest_start_cache[task_id] - (planned_start - self._starting_time_of_run),
                     predecessor_task_ids=predecessor_ids,
                     successor_task_ids=successor_ids,
                 )

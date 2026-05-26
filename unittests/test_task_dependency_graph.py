@@ -1214,12 +1214,20 @@ class TestTotalSlack:
         assert tdg.calculate_total_slack_of_task(short.id) == timedelta(minutes=25)
 
     def test_equal_length_parallel_paths_both_have_zero_slack(self) -> None:
-        """Two independent tasks of equal duration both lie on a longest path and have zero slack."""
+        """Two independent tasks of equal duration both lie on a longest path and have zero slack.
+
+        Note: NetworkX's dag_longest_path picks only one path when lengths are tied (insertion
+        order wins), so is_on_critical_path may return False for task B even though its total
+        slack is zero. This test documents that deliberate behaviour: zero slack and
+        is_on_critical_path are not equivalent when paths are tied.
+        """
         a = _node("A", 10)
         b = _node("B", 10)
         tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[], starting_time_of_run=_T0)
         assert tdg.calculate_total_slack_of_task(a.id) == timedelta(0)
         assert tdg.calculate_total_slack_of_task(b.id) == timedelta(0)
+        # Confirm the deliberate divergence: B has zero slack but is not on the NetworkX critical path
+        assert tdg.is_on_critical_path(b.id) is False
 
     def test_milestone_on_critical_path_has_zero_slack(self) -> None:
         """A zero-duration milestone on the critical path has zero total slack."""
