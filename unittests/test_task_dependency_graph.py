@@ -4,9 +4,9 @@ from datetime import datetime, timedelta, timezone
 
 import networkx as nx  # type: ignore[import-untyped]
 import pytest
-import taskdependencygraph.models as tdg_models
 from pydantic import AwareDatetime, ValidationError
 
+import taskdependencygraph.models as tdg_models
 from taskdependencygraph.models.graph_definition_validation import (
     ValidationCode,
 )
