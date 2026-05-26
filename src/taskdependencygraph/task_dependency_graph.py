@@ -14,6 +14,11 @@ import networkx as nx  # type: ignore[import-untyped]
 from networkx import DiGraph, dag_longest_path, dag_longest_path_length
 from pydantic import AwareDatetime
 
+from taskdependencygraph.models.graph_definition_validation import (
+    GraphDefinitionValidationFinding,
+    GraphDefinitionValidationResult,
+    ValidationCode,
+)
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.schedule_report import ScheduleEntry, ScheduleReport
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
@@ -46,6 +51,153 @@ class TaskDependencyGraph:
     But you shouldn't access it in the first place, except for some tests.
     There is a reason why it's "private"/"protected".
     """
+
+    @classmethod
+    def validate_definition(
+        cls, task_list: list[TaskNode], dependency_list: list[TaskDependencyEdge]
+    ) -> GraphDefinitionValidationResult:
+        """
+        Validates raw task and dependency lists before constructing a TaskDependencyGraph.
+
+        Returns a GraphDefinitionValidationResult containing all findings discovered.
+        Findings are collected in a single pass rather than stopping at the first problem,
+        so callers receive the complete picture in one call without catching exceptions.
+
+        Checks performed (in order):
+        - Duplicate TaskNode.id values
+        - Duplicate TaskNode.external_id values
+        - Milestones with non-zero planned_duration
+        - Missing edge endpoints (predecessor or successor not in task_list)
+        - Duplicate TaskDependencyEdge.id values
+        - Duplicate predecessor/successor edge pairs
+        - Cycles (using only edges whose both endpoints exist)
+        """
+        findings: list[GraphDefinitionValidationFinding] = []
+        valid_task_ids: set[TaskId] = set()
+
+        # --- task-level checks ---
+        seen_ids: set[TaskId] = set()
+        reported_dup_ids: set[TaskId] = set()
+        seen_external_ids: dict[str, TaskId] = {}
+
+        for task in task_list:
+            if task.id in seen_ids:
+                if task.id not in reported_dup_ids:
+                    findings.append(
+                        GraphDefinitionValidationFinding(
+                            code=ValidationCode.DUPLICATE_TASK_ID,
+                            message=f"Duplicate task id: {task.id!r}",
+                            task_id=task.id,
+                        )
+                    )
+                    reported_dup_ids.add(task.id)
+            else:
+                seen_ids.add(task.id)
+                valid_task_ids.add(task.id)
+
+            if task.external_id in seen_external_ids:
+                findings.append(
+                    GraphDefinitionValidationFinding(
+                        code=ValidationCode.DUPLICATE_EXTERNAL_ID,
+                        message=(
+                            f"Duplicate external_id {task.external_id!r}: "
+                            f"tasks {seen_external_ids[task.external_id]!r} and {task.id!r}"
+                        ),
+                        task_id=task.id,
+                    )
+                )
+            else:
+                seen_external_ids[task.external_id] = task.id
+
+            if task.is_milestone and task.planned_duration.total_seconds() > 0:
+                findings.append(
+                    GraphDefinitionValidationFinding(
+                        code=ValidationCode.INVALID_MILESTONE_DURATION,
+                        message=(
+                            f"Milestone {task.external_id!r} has non-zero planned duration:" f" {task.planned_duration}"
+                        ),
+                        task_id=task.id,
+                    )
+                )
+
+        # --- edge-level checks ---
+        seen_dep_ids: set[TaskDependencyId] = set()
+        reported_dup_dep_ids: set[TaskDependencyId] = set()
+        seen_edge_pairs: set[tuple[TaskId, TaskId]] = set()
+        valid_edges: list[TaskDependencyEdge] = []
+
+        for edge in dependency_list:
+            if edge.id in seen_dep_ids:
+                if edge.id not in reported_dup_dep_ids:
+                    findings.append(
+                        GraphDefinitionValidationFinding(
+                            code=ValidationCode.DUPLICATE_DEPENDENCY_ID,
+                            message=f"Duplicate dependency id: {edge.id!r}",
+                            dependency_id=edge.id,
+                        )
+                    )
+                    reported_dup_dep_ids.add(edge.id)
+            else:
+                seen_dep_ids.add(edge.id)
+
+            if edge.task_predecessor not in valid_task_ids:
+                findings.append(
+                    GraphDefinitionValidationFinding(
+                        code=ValidationCode.MISSING_EDGE_ENDPOINT,
+                        message=f"Edge {edge.id!r} references unknown predecessor {edge.task_predecessor!r}",
+                        task_id=edge.task_predecessor,
+                        dependency_id=edge.id,
+                    )
+                )
+
+            if edge.task_successor not in valid_task_ids:
+                findings.append(
+                    GraphDefinitionValidationFinding(
+                        code=ValidationCode.MISSING_EDGE_ENDPOINT,
+                        message=f"Edge {edge.id!r} references unknown successor {edge.task_successor!r}",
+                        task_id=edge.task_successor,
+                        dependency_id=edge.id,
+                    )
+                )
+
+            pair = (edge.task_predecessor, edge.task_successor)
+            if pair in seen_edge_pairs:
+                findings.append(
+                    GraphDefinitionValidationFinding(
+                        code=ValidationCode.DUPLICATE_EDGE_PAIR,
+                        message=f"Duplicate edge pair: {edge.task_predecessor!r} -> {edge.task_successor!r}",
+                        dependency_id=edge.id,
+                    )
+                )
+            else:
+                seen_edge_pairs.add(pair)
+
+            if edge.task_predecessor in valid_task_ids and edge.task_successor in valid_task_ids:
+                valid_edges.append(edge)
+
+        # --- cycle detection (only on edges with valid endpoints, skip duplicate pairs) ---
+        if valid_edges:
+            temp: nx.DiGraph = nx.DiGraph()
+            for task in task_list:
+                temp.add_node(task.id)
+            for edge in valid_edges:
+                if not temp.has_edge(edge.task_predecessor, edge.task_successor):
+                    temp.add_edge(edge.task_predecessor, edge.task_successor)
+            if not nx.is_directed_acyclic_graph(temp):
+                try:
+                    cycle = nx.find_cycle(temp)
+                    cycle_node_ids = [str(u) for u, _ in cycle]
+                    findings.append(
+                        GraphDefinitionValidationFinding(
+                            code=ValidationCode.CYCLE,
+                            message=f"Cycle detected: {' -> '.join(cycle_node_ids)}",
+                            task_id=TaskId(cycle[0][0]),
+                        )
+                    )
+                except nx.NetworkXNoCycle:  # pragma: no cover
+                    pass
+
+        return GraphDefinitionValidationResult(is_valid=len(findings) == 0, findings=findings)
 
     def __init__(
         self, task_list: list[TaskNode], dependency_list: list[TaskDependencyEdge], starting_time_of_run: AwareDatetime

@@ -6,6 +6,9 @@ import networkx as nx  # type: ignore[import-untyped]
 import pytest
 from pydantic import AwareDatetime
 
+from taskdependencygraph.models.graph_definition_validation import (
+    ValidationCode,
+)
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
@@ -1053,3 +1056,109 @@ class TestScheduleReport:
         entry = report.entries[0]
         assert entry.planned_start == early
         assert entry.planned_finish == early + timedelta(minutes=30)
+
+
+# ---------------------------------------------------------------------------
+# Issue #87 – pre-construction graph definition validation
+# ---------------------------------------------------------------------------
+
+
+class TestValidateDefinition:
+    """Tests for TaskDependencyGraph.validate_definition (issue #87)."""
+
+    def test_valid_definition_has_no_findings(self) -> None:
+        """A well-formed graph definition returns is_valid=True with an empty findings list."""
+        a = _node("A", 10)
+        b = _node("B", 20)
+        result = TaskDependencyGraph.validate_definition([a, b], [_edge(a, b)])
+        assert result.is_valid is True
+        assert result.findings == []
+
+    def test_duplicate_task_id_is_reported(self) -> None:
+        """Two TaskNode objects sharing the same id produce a DUPLICATE_TASK_ID finding."""
+        a = _node("A", 10)
+        a_dup = a.model_copy(update={"external_id": "A2"})  # same id, different external_id
+        result = TaskDependencyGraph.validate_definition([a, a_dup], [])
+        assert result.is_valid is False
+        assert any(f.code == ValidationCode.DUPLICATE_TASK_ID for f in result.findings)
+
+    def test_duplicate_external_id_is_reported(self) -> None:
+        """Two tasks with the same external_id produce a DUPLICATE_EXTERNAL_ID finding."""
+        a = _node("A", 10)
+        b = _node("A", 20)  # same external_id "A"
+        result = TaskDependencyGraph.validate_definition([a, b], [])
+        assert result.is_valid is False
+        assert any(f.code == ValidationCode.DUPLICATE_EXTERNAL_ID for f in result.findings)
+
+    def test_missing_predecessor_is_reported(self) -> None:
+        """An edge whose predecessor is absent from task_list produces MISSING_EDGE_ENDPOINT."""
+        a = _node("A", 10)
+        ghost = _node("ghost", 5)
+        result = TaskDependencyGraph.validate_definition([a], [_edge(ghost, a)])
+        assert result.is_valid is False
+        assert any(f.code == ValidationCode.MISSING_EDGE_ENDPOINT for f in result.findings)
+
+    def test_missing_successor_is_reported(self) -> None:
+        """An edge whose successor is absent from task_list produces MISSING_EDGE_ENDPOINT."""
+        a = _node("A", 10)
+        ghost = _node("ghost", 5)
+        result = TaskDependencyGraph.validate_definition([a], [_edge(a, ghost)])
+        assert result.is_valid is False
+        assert any(f.code == ValidationCode.MISSING_EDGE_ENDPOINT for f in result.findings)
+
+    def test_duplicate_dependency_id_is_reported(self) -> None:
+        """Two edges sharing the same id produce a DUPLICATE_DEPENDENCY_ID finding."""
+        a = _node("A", 10)
+        b = _node("B", 10)
+        c = _node("C", 10)
+        e1 = _edge(a, b)
+        e2 = e1.model_copy(update={"task_predecessor": b.id, "task_successor": c.id})
+        result = TaskDependencyGraph.validate_definition([a, b, c], [e1, e2])
+        assert result.is_valid is False
+        assert any(f.code == ValidationCode.DUPLICATE_DEPENDENCY_ID for f in result.findings)
+
+    def test_duplicate_edge_pair_is_reported(self) -> None:
+        """Two edges with the same predecessor/successor pair produce DUPLICATE_EDGE_PAIR."""
+        a = _node("A", 10)
+        b = _node("B", 10)
+        result = TaskDependencyGraph.validate_definition([a, b], [_edge(a, b), _edge(a, b)])
+        assert result.is_valid is False
+        assert any(f.code == ValidationCode.DUPLICATE_EDGE_PAIR for f in result.findings)
+
+    def test_cycle_is_reported(self) -> None:
+        """A dependency cycle produces a CYCLE finding."""
+        a = _node("A", 10)
+        b = _node("B", 10)
+        result = TaskDependencyGraph.validate_definition([a, b], [_edge(a, b), _edge(b, a)])
+        assert result.is_valid is False
+        assert any(f.code == ValidationCode.CYCLE for f in result.findings)
+
+    def test_invalid_milestone_duration_is_reported(self) -> None:
+        """A milestone with non-zero planned_duration produces INVALID_MILESTONE_DURATION."""
+        ms = _node("MS", 10, milestone=True)
+        result = TaskDependencyGraph.validate_definition([ms], [])
+        assert result.is_valid is False
+        assert any(f.code == ValidationCode.INVALID_MILESTONE_DURATION for f in result.findings)
+
+    def test_multiple_errors_returned_together(self) -> None:
+        """All independent findings are collected in a single call rather than stopping at the first."""
+        a = _node("A", 10)
+        a_dup = a.model_copy(update={"external_id": "A2"})  # DUPLICATE_TASK_ID
+        ms = _node("MS", 5, milestone=True)  # INVALID_MILESTONE_DURATION
+        ghost = _node("ghost", 5)
+        result = TaskDependencyGraph.validate_definition([a, a_dup, ms], [_edge(a, ghost)])
+        assert result.is_valid is False
+        codes = {f.code for f in result.findings}
+        assert ValidationCode.DUPLICATE_TASK_ID in codes
+        assert ValidationCode.INVALID_MILESTONE_DURATION in codes
+        assert ValidationCode.MISSING_EDGE_ENDPOINT in codes
+
+    def test_missing_endpoint_and_cycle_both_reported(self) -> None:
+        """Missing endpoints and a cycle are reported together in one result."""
+        a = _node("A", 10)
+        b = _node("B", 10)
+        ghost = _node("ghost", 5)
+        result = TaskDependencyGraph.validate_definition([a, b], [_edge(a, b), _edge(b, a), _edge(a, ghost)])
+        codes = {f.code for f in result.findings}
+        assert ValidationCode.CYCLE in codes
+        assert ValidationCode.MISSING_EDGE_ENDPOINT in codes
