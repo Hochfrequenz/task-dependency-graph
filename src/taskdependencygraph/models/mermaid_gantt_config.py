@@ -49,7 +49,8 @@ class MermaidGanttConfig(BaseModel):
         default=False,
         description=(
             "When True, tasks are grouped into Mermaid sections by their phase field. "
-            "Tasks with phase=None are placed under section_label. "
+            "Tasks with phase=None (including the internal artificial start/end nodes) "
+            "are placed under section_label. "
             "Phase groups appear in the order their phase is first encountered "
             "during graph iteration."
         ),

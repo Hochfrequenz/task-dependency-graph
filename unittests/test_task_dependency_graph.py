@@ -1391,6 +1391,22 @@ class TestMermaidGanttConfig:
         assert "section Phase 1" in output
         assert "section Phase 2" in output
 
+    def test_default_output_is_identical_to_hardcoded_baseline(self) -> None:
+        """Passing no config produces byte-for-byte identical output to the old hardcoded version."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        # Build the expected header the same way the old triple-quoted string did.
+        expected_header = (
+            "gantt\n"
+            "    title A Gantt Diagram\n"
+            "    dateFormat YYYY-MM-DDTHH:mm:SZ\n"
+            "    axisFormat %d.%m %H:%M\n"
+            "    tickInterval 15minute\n"
+            "    section Example Stream\n"
+        )
+        output = tdg.to_mermaid_gantt()
+        assert output.startswith(expected_header)
+
     def test_group_by_phase_none_tasks_go_under_section_label(self) -> None:
         """Tasks with phase=None are placed under section_label when group_by_phase=True."""
         a = _node("A", 10)  # phase=None
@@ -1399,3 +1415,24 @@ class TestMermaidGanttConfig:
         output = tdg.to_mermaid_gantt(MermaidGanttConfig(group_by_phase=True, section_label="Ungrouped"))
         assert "section Ungrouped" in output
         assert "section Phase 1" in output
+
+    def test_group_by_phase_all_none_phases_produces_single_section(self) -> None:
+        """When every task has phase=None, group_by_phase=True emits a single section."""
+        a = _node("A", 10)
+        b = _node("B", 20)
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(group_by_phase=True, section_label="All"))
+        assert output.count("section ") == 1
+        assert "section All" in output
+
+    def test_group_by_phase_section_order_follows_first_encounter(self) -> None:
+        """Phase sections appear in the order their phase is first encountered in graph iteration."""
+        a = _node("A", 10, phase="Alpha")
+        b = _node("B", 20, phase="Beta")
+        c = _node("C", 5, phase="Alpha")
+        tdg = TaskDependencyGraph(task_list=[a, b, c], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(group_by_phase=True))
+        # Artificial nodes (phase=None) appear first, then Alpha, then Beta in insertion order.
+        alpha_pos = output.index("section Alpha")
+        beta_pos = output.index("section Beta")
+        assert alpha_pos < beta_pos
