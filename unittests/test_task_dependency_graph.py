@@ -7,9 +7,10 @@ import pytest
 from pydantic import AwareDatetime, ValidationError
 
 import taskdependencygraph as tdg_pkg
-import taskdependencygraph as tdg_pkg
 import taskdependencygraph.models as tdg_models
 from taskdependencygraph.models import (
+    AddEdgeToGraphPreviewResponse,
+    AddNodeToGraphPreviewResponse,
     GraphDefinitionValidationFinding,
     GraphDefinitionValidationResult,
     ID_OF_ARTIFICIAL_ENDNODE,
@@ -1673,3 +1674,15 @@ class TestPublicApiImports:
         assert tdg_pkg.ValidationCode is ValidationCode
         assert tdg_pkg.GraphDefinitionValidationResult is GraphDefinitionValidationResult
         assert tdg_pkg.GraphDefinitionValidationFinding is GraphDefinitionValidationFinding
+
+    def test_top_level_package_exports_artificial_node_constants_and_functions(self) -> None:
+        """Artificial node IDs and factory instances are importable from the top-level package."""
+        assert tdg_pkg.ID_OF_ARTIFICIAL_ENDNODE is ID_OF_ARTIFICIAL_ENDNODE
+        assert tdg_pkg.ID_OF_ARTIFICIAL_STARTNODE is ID_OF_ARTIFICIAL_STARTNODE
+        assert tdg_pkg.task_node_as_artificial_endnode is task_node_as_artificial_endnode
+        assert tdg_pkg.task_node_as_artificial_startnode is task_node_as_artificial_startnode
+
+    def test_top_level_package_exports_graph_preview_responses(self) -> None:
+        """AddNodeToGraphPreviewResponse and AddEdgeToGraphPreviewResponse are importable from top-level."""
+        assert tdg_pkg.AddNodeToGraphPreviewResponse is AddNodeToGraphPreviewResponse
+        assert tdg_pkg.AddEdgeToGraphPreviewResponse is AddEdgeToGraphPreviewResponse

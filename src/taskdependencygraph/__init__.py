@@ -4,6 +4,8 @@ and give estimates when which task will be done
 """
 
 from .models import (
+    AddEdgeToGraphPreviewResponse,
+    AddNodeToGraphPreviewResponse,
     GraphDefinitionValidationFinding,
     GraphDefinitionValidationResult,
     ID_OF_ARTIFICIAL_ENDNODE,
@@ -28,6 +30,8 @@ from .models import (
 from .task_dependency_graph import TaskDependencyGraph
 
 __all__ = [
+    "AddEdgeToGraphPreviewResponse",
+    "AddNodeToGraphPreviewResponse",
     "GraphDefinitionValidationFinding",
     "GraphDefinitionValidationResult",
     "ID_OF_ARTIFICIAL_ENDNODE",
