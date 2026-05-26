@@ -52,6 +52,7 @@ class TaskDependencyGraph:
     There is a reason why it's "private"/"protected".
     """
 
+    # pylint:disable=too-many-locals,too-many-branches,too-many-statements
     @classmethod
     def validate_definition(
         cls, task_list: list[TaskNode], dependency_list: list[TaskDependencyEdge]
