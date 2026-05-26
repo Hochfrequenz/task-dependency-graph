@@ -67,7 +67,7 @@ class TaskNode(BaseModel):
     Tasks can have none, one or more tags. Tags are a possibility to group tasks.
     Example: ['IS-U', 'Rechnungen'].
     """
-    planned_duration: Annotated[timedelta, Field(min=timedelta(minutes=0))]
+    planned_duration: Annotated[timedelta, Field(ge=timedelta(0))]
     """ 
     The planned_duration_minutes expresses how long the task execution is planned to last (in minutes).
     Example: timedelta(minutes=600) (for 10h)
@@ -91,7 +91,7 @@ class TaskNode(BaseModel):
     The task may only start at this datetime or later, even if predecessors finish earlier.
     """
 
-    planned_duration_of_predecessor_tasks: Annotated[timedelta, Field(min=timedelta(minutes=0))] | None = None
+    planned_duration_of_predecessor_tasks: Annotated[timedelta, Field(ge=timedelta(0))] | None = None
     """
     The planned_duration_of_predecessor_tasks is the sum of the duration of the predecessor tasks. 
     The planned_duration_of_predecessor_tasks expresses, how long it takes from the beginning of the first task 
