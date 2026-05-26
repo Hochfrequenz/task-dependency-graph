@@ -79,6 +79,7 @@ class TaskDependencyGraph:
         seen_ids: set[TaskId] = set()
         reported_dup_ids: set[TaskId] = set()
         seen_external_ids: dict[str, TaskId] = {}
+        reported_dup_external_ids: set[str] = set()
 
         for task in task_list:
             if task.id in seen_ids:
@@ -96,16 +97,18 @@ class TaskDependencyGraph:
                 valid_task_ids.add(task.id)
 
             if task.external_id in seen_external_ids:
-                findings.append(
-                    GraphDefinitionValidationFinding(
-                        code=ValidationCode.DUPLICATE_EXTERNAL_ID,
-                        message=(
-                            f"Duplicate external_id {task.external_id!r}: "
-                            f"tasks {seen_external_ids[task.external_id]!r} and {task.id!r}"
-                        ),
-                        task_id=task.id,
+                if task.external_id not in reported_dup_external_ids:
+                    findings.append(
+                        GraphDefinitionValidationFinding(
+                            code=ValidationCode.DUPLICATE_EXTERNAL_ID,
+                            message=(
+                                f"Duplicate external_id {task.external_id!r}: "
+                                f"first seen at task {seen_external_ids[task.external_id]!r}"
+                            ),
+                            task_id=task.id,
+                        )
                     )
-                )
+                    reported_dup_external_ids.add(task.external_id)
             else:
                 seen_external_ids[task.external_id] = task.id
 
@@ -190,14 +193,14 @@ class TaskDependencyGraph:
                     findings.append(
                         GraphDefinitionValidationFinding(
                             code=ValidationCode.CYCLE,
-                            message=f"Cycle detected: {' -> '.join(cycle_node_ids)}",
+                            message=f"Cycle detected: {' -> '.join(cycle_node_ids)} -> {cycle_node_ids[0]}",
                             task_id=TaskId(cycle[0][0]),
                         )
                     )
                 except nx.NetworkXNoCycle:  # pragma: no cover
                     pass
 
-        return GraphDefinitionValidationResult(is_valid=len(findings) == 0, findings=findings)
+        return GraphDefinitionValidationResult(is_valid=len(findings) == 0, findings=tuple(findings))
 
     def __init__(
         self, task_list: list[TaskNode], dependency_list: list[TaskDependencyEdge], starting_time_of_run: AwareDatetime

@@ -1067,12 +1067,12 @@ class TestValidateDefinition:
     """Tests for TaskDependencyGraph.validate_definition (issue #87)."""
 
     def test_valid_definition_has_no_findings(self) -> None:
-        """A well-formed graph definition returns is_valid=True with an empty findings list."""
+        """A well-formed graph definition returns is_valid=True with an empty findings tuple."""
         a = _node("A", 10)
         b = _node("B", 20)
         result = TaskDependencyGraph.validate_definition([a, b], [_edge(a, b)])
         assert result.is_valid is True
-        assert result.findings == []
+        assert result.findings == ()
 
     def test_duplicate_task_id_is_reported(self) -> None:
         """Two TaskNode objects sharing the same id produce a DUPLICATE_TASK_ID finding."""
@@ -1159,6 +1159,17 @@ class TestValidateDefinition:
         b = _node("B", 10)
         ghost = _node("ghost", 5)
         result = TaskDependencyGraph.validate_definition([a, b], [_edge(a, b), _edge(b, a), _edge(a, ghost)])
+        assert result.is_valid is False
         codes = {f.code for f in result.findings}
         assert ValidationCode.CYCLE in codes
         assert ValidationCode.MISSING_EDGE_ENDPOINT in codes
+
+    def test_three_tasks_with_same_external_id_produce_one_finding(self) -> None:
+        """Three tasks sharing the same external_id produce exactly one DUPLICATE_EXTERNAL_ID finding."""
+        a = _node("EXT", 10)
+        b = _node("EXT", 20)
+        c = _node("EXT", 30)
+        result = TaskDependencyGraph.validate_definition([a, b, c], [])
+        assert result.is_valid is False
+        dup_findings = [f for f in result.findings if f.code == ValidationCode.DUPLICATE_EXTERNAL_ID]
+        assert len(dup_findings) == 1

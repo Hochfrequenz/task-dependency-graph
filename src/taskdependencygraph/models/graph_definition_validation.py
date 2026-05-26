@@ -29,6 +29,8 @@ class GraphDefinitionValidationFinding(BaseModel):
     code: ValidationCode
     message: str
     task_id: TaskId | None = None
+    """The task ID involved in this finding.
+    For MISSING_EDGE_ENDPOINT this may be an ID that does not exist in the task list."""
     dependency_id: TaskDependencyId | None = None
 
 
@@ -38,7 +40,7 @@ class GraphDefinitionValidationResult(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     is_valid: bool
-    findings: list[GraphDefinitionValidationFinding]
+    findings: tuple[GraphDefinitionValidationFinding, ...]
 
 
 __all__ = [
