@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import networkx as nx  # type: ignore[import-untyped]
 import pytest
+import taskdependencygraph.models as tdg_models
 from pydantic import AwareDatetime, ValidationError
 
 from taskdependencygraph.models.graph_definition_validation import (
@@ -12,7 +13,6 @@ from taskdependencygraph.models.graph_definition_validation import (
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
-import taskdependencygraph.models as tdg_models
 from taskdependencygraph.models.task_execution_status import TaskExecutionStatus
 from taskdependencygraph.models.task_node import TaskNode
 from taskdependencygraph.models.task_node_as_artificial_endnode import (
@@ -1605,3 +1605,29 @@ class TestTaskNodeExecutionStatus:
     def test_execution_status_exported_from_models(self) -> None:
         """TaskExecutionStatus is accessible via the top-level taskdependencygraph.models package."""
         assert tdg_models.TaskExecutionStatus is TaskExecutionStatus
+
+    def test_execution_status_round_trips_through_pydantic_serialisation(self) -> None:
+        """execution_status survives model_dump / model_validate round-trip as a StrEnum."""
+        task = TaskNode(
+            id=TaskId(uuid.uuid4()),
+            external_id="RT",
+            name="Round-trip Task",
+            planned_duration=timedelta(minutes=15),
+            execution_status=TaskExecutionStatus.OBSOLETE,
+        )
+        dumped = task.model_dump()
+        restored = TaskNode.model_validate(dumped)
+        assert restored.execution_status is TaskExecutionStatus.OBSOLETE
+
+    def test_execution_status_does_not_appear_in_dot_output(self) -> None:
+        """execution_status value is not leaked into the DOT representation of a task."""
+        task = TaskNode(
+            id=TaskId(uuid.uuid4()),
+            external_id="D",
+            name="Dot Task",
+            planned_duration=timedelta(minutes=10),
+            execution_status=TaskExecutionStatus.STARTED,
+        )
+        dot = task.to_dot({"label": "Dot Task", "color": "blue"})
+        assert "STARTED" not in dot
+        assert "execution_status" not in dot
