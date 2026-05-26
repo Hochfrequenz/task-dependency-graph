@@ -4,6 +4,8 @@ interface like descriptions for any kind of plotting "client" library
 
 from typing import Literal, Protocol
 
+from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
+
 PlotMode = Literal["dot", "gantt"]
 
 
@@ -23,7 +25,7 @@ class MermaidPlottable(Protocol):
     something that can be plotted using Mermaid
     """
 
-    def to_mermaid_gantt(self) -> str:
+    def to_mermaid_gantt(self, config: MermaidGanttConfig | None = None) -> str:
         """
         returns the mermaid-gantt chart representation of this object as plain string
         """

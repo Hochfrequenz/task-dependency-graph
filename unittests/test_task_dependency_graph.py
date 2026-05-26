@@ -10,6 +10,7 @@ from taskdependencygraph.models.graph_definition_validation import (
     ValidationCode,
 )
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
+from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_node import TaskNode
 from taskdependencygraph.models.task_node_as_artificial_endnode import (
@@ -653,7 +654,12 @@ _T0 = datetime(2024, 6, 1, 8, 0, 0, tzinfo=timezone.utc)
 
 
 def _node(
-    external_id: str, duration_minutes: int, *, milestone: bool = False, earliest_start: datetime | None = None
+    external_id: str,
+    duration_minutes: int,
+    *,
+    milestone: bool = False,
+    earliest_start: datetime | None = None,
+    phase: str | None = None,
 ) -> TaskNode:
     return TaskNode(
         id=TaskId(uuid.uuid4()),
@@ -662,6 +668,7 @@ def _node(
         planned_duration=timedelta(minutes=duration_minutes),
         is_milestone=milestone,
         earliest_starttime=earliest_start,
+        phase=phase,
     )
 
 
@@ -1301,3 +1308,94 @@ class TestScheduleEntryTotalSlack:
         by_id = {e.task_id: e for e in report.entries}
         for task in [short, long_, end]:
             assert by_id[task.id].total_slack == tdg.calculate_total_slack_of_task(task.id)
+
+
+# ---------------------------------------------------------------------------
+# Issue #89 – configurable Mermaid Gantt output
+# ---------------------------------------------------------------------------
+
+
+class TestMermaidGanttConfig:
+    """Tests for to_mermaid_gantt with MermaidGanttConfig (issue #89)."""
+
+    def test_default_output_contains_hardcoded_defaults(self) -> None:
+        """Calling with no config preserves the existing title/format/section defaults."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt()
+        assert "title A Gantt Diagram" in output
+        assert "dateFormat YYYY-MM-DDTHH:mm:SZ" in output
+        assert "axisFormat %d.%m %H:%M" in output
+        assert "tickInterval 15minute" in output
+        assert "section Example Stream" in output
+
+    def test_custom_title_appears_in_output(self) -> None:
+        """A custom title is rendered in the chart header."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(title="My Project"))
+        assert "title My Project" in output
+        assert "title A Gantt Diagram" not in output
+
+    def test_custom_date_format_appears_in_output(self) -> None:
+        """A custom date_format is emitted in the chart header."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(date_format="YYYY-MM-DD"))
+        assert "dateFormat YYYY-MM-DD" in output
+
+    def test_custom_axis_format_appears_in_output(self) -> None:
+        """A custom axis_format is emitted in the chart header."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(axis_format="%H:%M"))
+        assert "axisFormat %H:%M" in output
+
+    def test_custom_tick_interval_appears_in_output(self) -> None:
+        """A custom tick_interval is emitted in the chart header."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(tick_interval="1hour"))
+        assert "tickInterval 1hour" in output
+
+    def test_custom_section_label_appears_in_output(self) -> None:
+        """A custom section_label replaces the default section header."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(section_label="My Stream"))
+        assert "section My Stream" in output
+        assert "section Example Stream" not in output
+
+    def test_critical_path_task_still_marked_crit(self) -> None:
+        """Critical-path tasks are still marked with 'crit' when using a custom config."""
+        a = _node("A", 10)
+        b = _node("B", 20)
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[_edge(a, b)], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(title="Custom"))
+        assert "crit" in output
+
+    def test_milestone_still_marked_milestone(self) -> None:
+        """Milestones are still marked with 'milestone' when using a custom config."""
+        ms = _node("MS", 0, milestone=True)
+        tdg = TaskDependencyGraph(task_list=[ms], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(title="Custom"))
+        assert "milestone" in output
+
+    def test_group_by_phase_creates_sections_per_phase(self) -> None:
+        """When group_by_phase=True, tasks are grouped into Mermaid sections by phase."""
+        a = _node("A", 10, phase="Phase 1")
+        b = _node("B", 20, phase="Phase 2")
+        c = _node("C", 5, phase="Phase 1")
+        tdg = TaskDependencyGraph(task_list=[a, b, c], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(group_by_phase=True))
+        assert "section Phase 1" in output
+        assert "section Phase 2" in output
+
+    def test_group_by_phase_none_tasks_go_under_section_label(self) -> None:
+        """Tasks with phase=None are placed under section_label when group_by_phase=True."""
+        a = _node("A", 10)  # phase=None
+        b = _node("B", 20, phase="Phase 1")
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[], starting_time_of_run=_T0)
+        output = tdg.to_mermaid_gantt(MermaidGanttConfig(group_by_phase=True, section_label="Ungrouped"))
+        assert "section Ungrouped" in output
+        assert "section Phase 1" in output

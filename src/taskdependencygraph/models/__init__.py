@@ -1,5 +1,6 @@
 """models are python objects which we use to model tasks, dependencies and the graph they form"""
 
+from .mermaid_gantt_config import MermaidGanttConfig
 from .graph_definition_validation import (
     GraphDefinitionValidationFinding,
     GraphDefinitionValidationResult,
@@ -15,6 +16,7 @@ from .task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE
 from .task_node_as_artificial_startnode import ID_OF_ARTIFICIAL_STARTNODE
 
 __all__ = [
+    "MermaidGanttConfig",
     "GraphDefinitionValidationFinding",
     "GraphDefinitionValidationResult",
     "ValidationCode",
