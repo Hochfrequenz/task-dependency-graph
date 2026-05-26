@@ -13,7 +13,10 @@ from taskdependencygraph.models.task_node_as_artificial_endnode import (
     ID_OF_ARTIFICIAL_ENDNODE,
     task_node_as_artificial_endnode,
 )
-from taskdependencygraph.models.task_node_as_artificial_startnode import task_node_as_artificial_startnode
+from taskdependencygraph.models.task_node_as_artificial_startnode import (
+    ID_OF_ARTIFICIAL_STARTNODE,
+    task_node_as_artificial_startnode,
+)
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
 from .example_data_for_test_task_dependency_graph import (
@@ -743,3 +746,114 @@ class TestPlannedFinishTimeOfGraph:
         long_ = _node("long", 40)
         tdg = TaskDependencyGraph(task_list=[short, long_], dependency_list=[], starting_time_of_run=_T0)
         assert tdg.calculate_planned_finish_time_of_graph() == _T0 + timedelta(minutes=40)
+
+
+# ---------------------------------------------------------------------------
+# Issue #85 – ordered critical path data
+# ---------------------------------------------------------------------------
+
+
+class TestGetCriticalPathTaskIds:
+    """Tests for get_critical_path_task_ids (issue #85)."""
+
+    def test_linear_graph_all_tasks_on_critical_path(self) -> None:
+        """In a linear chain every task is on the critical path, in order."""
+        a = _node("A", 10)
+        b = _node("B", 20)
+        c = _node("C", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b, c],
+            dependency_list=[_edge(a, b), _edge(b, c)],
+            starting_time_of_run=_T0,
+        )
+        ids = tdg.get_critical_path_task_ids()
+        assert ids == [a.id, b.id, c.id]
+
+    def test_parallel_paths_longer_path_wins(self) -> None:
+        """When two paths diverge, the longer one is on the critical path."""
+        start = _node("start", 5)
+        short = _node("short", 3)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[start, short, long_, end],
+            dependency_list=[_edge(start, short), _edge(start, long_), _edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        ids = tdg.get_critical_path_task_ids()
+        assert start.id in ids
+        assert long_.id in ids
+        assert end.id in ids
+        assert short.id not in ids
+
+    def test_milestone_on_critical_path_is_included(self) -> None:
+        """A zero-duration milestone that lies on the critical path appears in the result."""
+        a = _node("A", 20)
+        ms = _node("MS", 0, milestone=True)
+        b = _node("B", 10)
+        tdg = TaskDependencyGraph(
+            task_list=[a, ms, b],
+            dependency_list=[_edge(a, ms), _edge(ms, b)],
+            starting_time_of_run=_T0,
+        )
+        ids = tdg.get_critical_path_task_ids()
+        assert ms.id in ids
+
+    def test_default_excludes_artificial_nodes(self) -> None:
+        """Artificial start/end nodes must not appear by default."""
+        a = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[a], dependency_list=[], starting_time_of_run=_T0)
+        ids = tdg.get_critical_path_task_ids()
+        assert ID_OF_ARTIFICIAL_STARTNODE not in ids
+        assert ID_OF_ARTIFICIAL_ENDNODE not in ids
+
+    def test_include_artificial_nodes_flag(self) -> None:
+        """Passing include_artificial_nodes=True makes artificial nodes appear at the boundaries."""
+        a = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[a], dependency_list=[], starting_time_of_run=_T0)
+        ids = tdg.get_critical_path_task_ids(include_artificial_nodes=True)
+        assert ids[0] == ID_OF_ARTIFICIAL_STARTNODE
+        assert ids[-1] == ID_OF_ARTIFICIAL_ENDNODE
+
+    def test_tie_behavior_is_deterministic(self) -> None:
+        """Equal-length parallel paths produce a deterministic (NetworkX-ordered) result."""
+        a = _node("A", 10)
+        b = _node("B", 10)
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[], starting_time_of_run=_T0)
+        ids1 = tdg.get_critical_path_task_ids()
+        ids2 = tdg.get_critical_path_task_ids()
+        assert ids1 == ids2  # same graph, same result every call
+        assert len(ids1) == 1  # only one task in the path (both have equal weight; NetworkX picks one)
+
+
+class TestGetCriticalPathTasks:
+    """Tests for get_critical_path_tasks (issue #85)."""
+
+    def test_returns_task_nodes_in_order(self) -> None:
+        """get_critical_path_tasks returns TaskNode objects matching the ordered IDs."""
+        a = _node("A", 5)
+        b = _node("B", 15)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b],
+            dependency_list=[_edge(a, b)],
+            starting_time_of_run=_T0,
+        )
+        tasks = tdg.get_critical_path_tasks()
+        assert [t.id for t in tasks] == tdg.get_critical_path_task_ids()
+
+    def test_default_excludes_artificial_task_nodes(self) -> None:
+        """Artificial TaskNode objects must not appear by default."""
+        a = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[a], dependency_list=[], starting_time_of_run=_T0)
+        tasks = tdg.get_critical_path_tasks()
+        task_ids = [t.id for t in tasks]
+        assert ID_OF_ARTIFICIAL_STARTNODE not in task_ids
+        assert ID_OF_ARTIFICIAL_ENDNODE not in task_ids
+
+    def test_include_artificial_nodes_flag(self) -> None:
+        """With include_artificial_nodes=True the first and last nodes are the artificial ones."""
+        a = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[a], dependency_list=[], starting_time_of_run=_T0)
+        tasks = tdg.get_critical_path_tasks(include_artificial_nodes=True)
+        assert tasks[0].id == ID_OF_ARTIFICIAL_STARTNODE
+        assert tasks[-1].id == ID_OF_ARTIFICIAL_ENDNODE

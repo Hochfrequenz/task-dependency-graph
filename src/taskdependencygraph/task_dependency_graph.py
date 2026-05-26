@@ -470,6 +470,37 @@ class TaskDependencyGraph:
         task: TaskNode = self._graph.nodes[task_id]["domain_model"]
         return self.calculate_planned_starting_time_of_task(task_id) + task.planned_duration
 
+    def get_critical_path_task_ids(self, include_artificial_nodes: bool = False) -> list[TaskId]:
+        """
+        Returns the ordered list of task IDs on the critical path, from graph start to graph finish.
+
+        The path is determined by the same weighted-DAG semantics used by is_on_critical_path.
+        When multiple paths share the same total duration (tie), the result follows NetworkX's
+        deterministic graph-ordering: the path whose nodes appear earliest in insertion order wins.
+        Use a separate get_critical_path_task_id_paths() API (not yet implemented) if all tied
+        paths are needed.
+
+        By default artificial start/end node IDs are excluded. Pass include_artificial_nodes=True
+        to include them (useful for debugging or advanced consumers).
+        """
+        path: list[TaskId] = nx.dag_longest_path(self._graph, weight="weight")
+        if include_artificial_nodes:
+            return path
+        artificial = {task_node_as_artificial_startnode.id, task_node_as_artificial_endnode.id}
+        return [tid for tid in path if tid not in artificial]
+
+    def get_critical_path_tasks(self, include_artificial_nodes: bool = False) -> list[TaskNode]:
+        """
+        Returns the ordered list of TaskNode objects on the critical path, from graph start to graph finish.
+
+        Convenience wrapper around get_critical_path_task_ids that resolves IDs to their domain models.
+        The include_artificial_nodes parameter has the same semantics as in get_critical_path_task_ids.
+        """
+        return [
+            self._graph.nodes[tid]["domain_model"]
+            for tid in self.get_critical_path_task_ids(include_artificial_nodes=include_artificial_nodes)
+        ]
+
     def calculate_planned_finish_time_of_graph(self) -> AwareDatetime:
         """
         Returns the planned finish time of the entire graph — the moment the last task completes.
