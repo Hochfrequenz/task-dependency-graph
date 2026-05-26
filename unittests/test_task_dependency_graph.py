@@ -9,12 +9,12 @@ from pydantic import AwareDatetime, ValidationError
 import taskdependencygraph as tdg_pkg
 import taskdependencygraph.models as tdg_models
 from taskdependencygraph.models import (
+    ID_OF_ARTIFICIAL_ENDNODE,
+    ID_OF_ARTIFICIAL_STARTNODE,
     AddEdgeToGraphPreviewResponse,
     AddNodeToGraphPreviewResponse,
     GraphDefinitionValidationFinding,
     GraphDefinitionValidationResult,
-    ID_OF_ARTIFICIAL_ENDNODE,
-    ID_OF_ARTIFICIAL_STARTNODE,
     MermaidGanttConfig,
     ScheduleEntry,
     ScheduleReport,
