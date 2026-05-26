@@ -119,7 +119,7 @@ docker container:
 # docker-compose.yaml
 services:
   kroki: # see https://docs.kroki.io/kroki/setup/use-docker-or-podman/#_run_multiple_kroki_containers_together
-    image: yuzutech/kroki:0.24.1
+    image: yuzutech/kroki:0.30.1
     depends_on:
       - mermaid
     environment:
