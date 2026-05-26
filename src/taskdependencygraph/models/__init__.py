@@ -6,6 +6,7 @@ from .graph_definition_validation import (
     ValidationCode,
 )
 from .ids import PersonId, RunGroupId, RunGroupPersonRelationId, RunId, TaskDependencyId, TaskId
+from .mermaid_gantt_config import MermaidGanttConfig
 from .person import Person
 from .schedule_report import ScheduleEntry, ScheduleReport
 from .task_dependency_edge import TaskDependencyEdge
@@ -15,6 +16,7 @@ from .task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE
 from .task_node_as_artificial_startnode import ID_OF_ARTIFICIAL_STARTNODE
 
 __all__ = [
+    "MermaidGanttConfig",
     "GraphDefinitionValidationFinding",
     "GraphDefinitionValidationResult",
     "ValidationCode",

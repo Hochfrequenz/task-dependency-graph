@@ -20,6 +20,7 @@ from taskdependencygraph.models.graph_definition_validation import (
     ValidationCode,
 )
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
+from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
 from taskdependencygraph.models.schedule_report import ScheduleEntry, ScheduleReport
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_dependency_update import (
@@ -946,17 +947,42 @@ class TaskDependencyGraph:
         # https://kroki.io/#try (select 'GraphViz' in the dropdown)
         return result
 
-    def to_mermaid_gantt(self) -> str:
+    def to_mermaid_gantt(self, config: MermaidGanttConfig | None = None) -> str:
         """
-        Returns the mermaid-gantt-representation of the entire tdg
+        Returns the Mermaid Gantt chart representation of the entire graph.
+
+        Pass a MermaidGanttConfig to customise the title, date/axis/tick formats,
+        section label, or phase grouping. Calling with no argument (or None) preserves
+        the existing default output exactly.
         """
-        result: str = """gantt
-    title A Gantt Diagram
-    dateFormat YYYY-MM-DDTHH:mm:SZ
-    axisFormat %d.%m %H:%M
-    tickInterval 15minute
-    section Example Stream
-"""
-        # todo: group by stream https://github.com/Hochfrequenz/cutover-tool/issues/374
-        result += "".join(self._get_task_mermaid_gantt(tid) for tid in self._graph.nodes().keys())
-        return result
+        if config is None:
+            config = MermaidGanttConfig()
+
+        header = (
+            f"gantt\n"
+            f"    title {config.title}\n"
+            f"    dateFormat {config.date_format}\n"
+            f"    axisFormat {config.axis_format}\n"
+            f"    tickInterval {config.tick_interval}\n"
+        )
+
+        if not config.group_by_phase:
+            body = f"    section {config.section_label}\n"
+            body += "".join(self._get_task_mermaid_gantt(tid) for tid in self._graph.nodes().keys())
+            return header + body
+
+        # Group tasks by phase, preserving graph iteration order within each group.
+        phases: dict[str | None, list[TaskId]] = {}
+        for tid in self._graph.nodes():
+            phase = self._graph.nodes[tid]["domain_model"].phase
+            if phase not in phases:
+                phases[phase] = []
+            phases[phase].append(tid)
+
+        body = ""
+        for phase, tids in phases.items():
+            section_name = config.section_label if phase is None else phase
+            body += f"    section {section_name}\n"
+            body += "".join(self._get_task_mermaid_gantt(tid) for tid in tids)
+
+        return header + body
