@@ -2,6 +2,7 @@
 taskdependencygraph is a library to model tasks and dependencies between tasks in a networkx DiGraph
 and give estimates when which task will be done
 """
+
 # pylint: disable=duplicate-code
 # The __all__ list here intentionally mirrors models/__init__.py — re-exporting is the purpose of this file.
 
