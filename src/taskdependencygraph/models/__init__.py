@@ -2,6 +2,7 @@
 
 from .ids import PersonId, RunGroupId, RunGroupPersonRelationId, RunId, TaskDependencyId, TaskId
 from .person import Person
+from .schedule_report import ScheduleEntry, ScheduleReport
 from .task_dependency_edge import TaskDependencyEdge
 from .task_execution_status import TaskExecutionStatus
 from .task_node import TaskNode
@@ -16,6 +17,8 @@ __all__ = [
     "TaskId",
     "TaskDependencyId",
     "PersonId",
+    "ScheduleEntry",
+    "ScheduleReport",
     "TaskNode",
     "TaskDependencyEdge",
     "TaskExecutionStatus",

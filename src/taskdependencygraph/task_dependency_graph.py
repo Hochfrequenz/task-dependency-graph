@@ -15,6 +15,7 @@ from networkx import DiGraph, dag_longest_path, dag_longest_path_length
 from pydantic import AwareDatetime
 
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
+from taskdependencygraph.models.schedule_report import ScheduleEntry, ScheduleReport
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_dependency_update import (
     AddEdgeToGraphPreviewResponse,
@@ -516,6 +517,87 @@ class TaskDependencyGraph:
         callers to import or know about ID_OF_ARTIFICIAL_ENDNODE.
         """
         return self.calculate_planned_starting_time_of_task(task_node_as_artificial_endnode.id)
+
+    def create_schedule_report(self, include_artificial_nodes: bool = False) -> ScheduleReport:
+        """
+        Returns a ScheduleReport containing planning data for all tasks in the graph.
+
+        Each ScheduleEntry carries the task's planned start, planned finish, duration,
+        milestone and critical-path flags, and filtered predecessor/successor ID lists.
+        Artificial start/end nodes are excluded by default; pass include_artificial_nodes=True
+        to include them.
+
+        Entries are sorted by planned_start, then external_id, then name.
+        Predecessor and successor lists are sorted by the same key on the referenced task.
+        """
+        critical_path_ids = self.get_critical_path_task_ids(include_artificial_nodes=include_artificial_nodes)
+        critical_path_set = set(critical_path_ids)
+
+        # Pre-compute all start times once to avoid repeated DAG traversals inside sort keys.
+        start_cache: dict[TaskId, AwareDatetime] = {
+            tid: self.calculate_planned_starting_time_of_task(tid) for tid in self._graph.nodes
+        }
+
+        def _task_sort_key(tid: TaskId) -> tuple[AwareDatetime, str, str]:
+            task: TaskNode = self._graph.nodes[tid]["domain_model"]
+            return (start_cache[tid], task.external_id, task.name)
+
+        entries: list[ScheduleEntry] = []
+        for task_id in self._graph.nodes:
+            if not include_artificial_nodes and task_id in _ARTIFICIAL_NODE_IDS:
+                continue
+            task: TaskNode = self._graph.nodes[task_id]["domain_model"]
+            planned_start = start_cache[task_id]
+            planned_finish = (
+                self.calculate_planned_finish_time_of_task(task_id)
+                if task_id not in _ARTIFICIAL_NODE_IDS
+                else planned_start + task.planned_duration
+            )
+
+            predecessor_ids = sorted(
+                [
+                    pid
+                    for pid in self._graph.predecessors(task_id)
+                    if include_artificial_nodes or pid not in _ARTIFICIAL_NODE_IDS
+                ],
+                key=_task_sort_key,
+            )
+            successor_ids = sorted(
+                [
+                    sid
+                    for sid in self._graph.successors(task_id)
+                    if include_artificial_nodes or sid not in _ARTIFICIAL_NODE_IDS
+                ],
+                key=_task_sort_key,
+            )
+
+            entries.append(
+                ScheduleEntry(
+                    task_id=task_id,
+                    external_id=task.external_id,
+                    name=task.name,
+                    phase=task.phase,
+                    tags=task.tags,
+                    planned_start=planned_start,
+                    planned_finish=planned_finish,
+                    planned_duration=task.planned_duration,
+                    is_milestone=task.is_milestone,
+                    is_on_critical_path=task_id in critical_path_set,
+                    predecessor_task_ids=predecessor_ids,
+                    successor_task_ids=successor_ids,
+                )
+            )
+
+        entries.sort(key=lambda e: (e.planned_start, e.external_id, e.name))
+        graph_finish = self.calculate_planned_finish_time_of_graph()
+
+        return ScheduleReport(
+            graph_start=self._starting_time_of_run,
+            graph_finish=graph_finish,
+            total_duration=graph_finish - self._starting_time_of_run,
+            critical_path_task_ids=critical_path_ids,
+            entries=entries,
+        )
 
     def create_list_of_task_node_copies_with_planned_starting_time(self) -> list[TaskNode]:
         """

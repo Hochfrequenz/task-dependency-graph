@@ -892,3 +892,164 @@ class TestGetCriticalPathTasks:
         assert long_.id in task_ids
         assert end.id in task_ids
         assert short.id not in task_ids
+
+
+# ---------------------------------------------------------------------------
+# Issue #86 – structured schedule report
+# ---------------------------------------------------------------------------
+
+
+class TestScheduleReport:
+    """Tests for create_schedule_report (issue #86)."""
+
+    def test_report_contains_all_non_artificial_tasks(self) -> None:
+        """All real tasks appear in the report and no artificial nodes appear by default."""
+        a = _node("A", 10)
+        b = _node("B", 20)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b],
+            dependency_list=[_edge(a, b)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        entry_ids = {e.task_id for e in report.entries}
+        assert entry_ids == {a.id, b.id}
+        assert ID_OF_ARTIFICIAL_STARTNODE not in entry_ids
+        assert ID_OF_ARTIFICIAL_ENDNODE not in entry_ids
+
+    def test_report_planned_start_finish_correct(self) -> None:
+        """Each entry has the correct planned_start and planned_finish."""
+        a = _node("A", 10)
+        b = _node("B", 20)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b],
+            dependency_list=[_edge(a, b)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        assert by_id[a.id].planned_start == _T0
+        assert by_id[a.id].planned_finish == _T0 + timedelta(minutes=10)
+        assert by_id[b.id].planned_start == _T0 + timedelta(minutes=10)
+        assert by_id[b.id].planned_finish == _T0 + timedelta(minutes=30)
+
+    def test_report_critical_path_flags(self) -> None:
+        """is_on_critical_path flags match get_critical_path_task_ids output."""
+        short = _node("short", 5)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, end],
+            dependency_list=[_edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        cp_ids = set(tdg.get_critical_path_task_ids())
+        for entry in report.entries:
+            assert entry.is_on_critical_path == (entry.task_id in cp_ids)
+
+    def test_report_predecessor_successor_ids_exclude_artificial(self) -> None:
+        """Predecessor and successor lists never contain artificial node IDs by default."""
+        a = _node("A", 10)
+        b = _node("B", 5)
+        c = _node("C", 15)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b, c],
+            dependency_list=[_edge(a, c), _edge(b, c)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        for entry in report.entries:
+            assert ID_OF_ARTIFICIAL_STARTNODE not in entry.predecessor_task_ids
+            assert ID_OF_ARTIFICIAL_ENDNODE not in entry.predecessor_task_ids
+            assert ID_OF_ARTIFICIAL_STARTNODE not in entry.successor_task_ids
+            assert ID_OF_ARTIFICIAL_ENDNODE not in entry.successor_task_ids
+
+    def test_report_predecessor_and_successor_ids_correct(self) -> None:
+        """Each entry's predecessor/successor lists contain the correct task IDs."""
+        a = _node("A", 10)
+        b = _node("B", 5)
+        c = _node("C", 15)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b, c],
+            dependency_list=[_edge(a, c), _edge(b, c)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        assert by_id[a.id].predecessor_task_ids == []
+        assert by_id[b.id].predecessor_task_ids == []
+        assert set(by_id[c.id].predecessor_task_ids) == {a.id, b.id}
+        assert by_id[a.id].successor_task_ids == [c.id]
+        assert by_id[b.id].successor_task_ids == [c.id]
+        assert by_id[c.id].successor_task_ids == []
+
+    def test_report_entry_ordering(self) -> None:
+        """Entries are sorted by planned_start, then external_id, then name."""
+        a = _node("A", 10)
+        b = _node("B", 10)
+        c = _node("C", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b, c],
+            dependency_list=[_edge(a, c), _edge(b, c)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        starts = [e.planned_start for e in report.entries]
+        assert starts == sorted(starts)
+        # A and B both start at T0; sorted alphabetically by external_id
+        assert report.entries[0].external_id == "A"
+        assert report.entries[1].external_id == "B"
+
+    def test_report_predecessor_ordering_is_deterministic(self) -> None:
+        """Predecessor list is sorted by planned_start, then external_id, then name."""
+        pred_a = _node("PA", 5)
+        pred_b = _node("PB", 10)
+        succ = _node("S", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[pred_a, pred_b, succ],
+            dependency_list=[_edge(pred_a, succ), _edge(pred_b, succ)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        # Both predecessors start at T0; sorted alphabetically: PA < PB
+        assert by_id[succ.id].predecessor_task_ids == [pred_a.id, pred_b.id]
+
+    def test_report_graph_level_fields(self) -> None:
+        """graph_start, graph_finish, total_duration, and critical_path_task_ids are correct."""
+        a = _node("A", 20)
+        b = _node("B", 10)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b],
+            dependency_list=[_edge(a, b)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        assert report.graph_start == _T0
+        assert report.graph_finish == _T0 + timedelta(minutes=30)
+        assert report.total_duration == timedelta(minutes=30)
+        assert report.critical_path_task_ids == tdg.get_critical_path_task_ids()
+
+    def test_include_artificial_nodes_flag(self) -> None:
+        """With include_artificial_nodes=True artificial nodes appear in entries and boundary ID lists."""
+        a = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[a], dependency_list=[], starting_time_of_run=_T0)
+        report = tdg.create_schedule_report(include_artificial_nodes=True)
+        entry_ids = {e.task_id for e in report.entries}
+        assert ID_OF_ARTIFICIAL_STARTNODE in entry_ids
+        assert ID_OF_ARTIFICIAL_ENDNODE in entry_ids
+        # The real task's predecessor list should include the artificial start
+        by_id = {e.task_id: e for e in report.entries}
+        assert ID_OF_ARTIFICIAL_STARTNODE in by_id[a.id].predecessor_task_ids
+        assert ID_OF_ARTIFICIAL_ENDNODE in by_id[a.id].successor_task_ids
+
+    def test_earliest_starttime_respected_in_report(self) -> None:
+        """A task with earliest_starttime has its delayed planned_start and planned_finish in the report."""
+        early = datetime(2024, 6, 1, 10, 0, 0, tzinfo=timezone.utc)  # T0 + 2h
+        a = _node("A", 30, earliest_start=early)
+        tdg = TaskDependencyGraph(task_list=[a], dependency_list=[], starting_time_of_run=_T0)
+        report = tdg.create_schedule_report()
+        entry = report.entries[0]
+        assert entry.planned_start == early
+        assert entry.planned_finish == early + timedelta(minutes=30)
