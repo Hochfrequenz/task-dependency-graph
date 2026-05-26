@@ -6,21 +6,25 @@ import networkx as nx  # type: ignore[import-untyped]
 import pytest
 from pydantic import AwareDatetime, ValidationError
 
+import taskdependencygraph as tdg_pkg
 import taskdependencygraph.models as tdg_models
-from taskdependencygraph.models.graph_definition_validation import (
-    ValidationCode,
-)
-from taskdependencygraph.models.ids import TaskDependencyId, TaskId
-from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
-from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
-from taskdependencygraph.models.task_execution_status import TaskExecutionStatus
-from taskdependencygraph.models.task_node import TaskNode
-from taskdependencygraph.models.task_node_as_artificial_endnode import (
+from taskdependencygraph.models import (
     ID_OF_ARTIFICIAL_ENDNODE,
-    task_node_as_artificial_endnode,
-)
-from taskdependencygraph.models.task_node_as_artificial_startnode import (
     ID_OF_ARTIFICIAL_STARTNODE,
+    AddEdgeToGraphPreviewResponse,
+    AddNodeToGraphPreviewResponse,
+    GraphDefinitionValidationFinding,
+    GraphDefinitionValidationResult,
+    MermaidGanttConfig,
+    ScheduleEntry,
+    ScheduleReport,
+    TaskDependencyEdge,
+    TaskDependencyId,
+    TaskExecutionStatus,
+    TaskId,
+    TaskNode,
+    ValidationCode,
+    task_node_as_artificial_endnode,
     task_node_as_artificial_startnode,
 )
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
@@ -1631,3 +1635,54 @@ class TestTaskNodeExecutionStatus:
         dot = task.to_dot({"label": "Dot Task", "color": "blue"})
         assert "STARTED" not in dot
         assert "execution_status" not in dot
+
+
+# ---------------------------------------------------------------------------
+
+
+class TestPublicApiImports:
+    """Verify simplified import paths work for all public symbols (issue #102)."""
+
+    def test_artificial_node_functions_importable_from_models(self) -> None:
+        """task_node_as_artificial_endnode/startnode are importable from taskdependencygraph.models."""
+        assert tdg_models.task_node_as_artificial_endnode is task_node_as_artificial_endnode
+        assert tdg_models.task_node_as_artificial_startnode is task_node_as_artificial_startnode
+
+    def test_top_level_package_exports_task_node(self) -> None:
+        """TaskNode is importable directly from the taskdependencygraph package."""
+        assert tdg_pkg.TaskNode is TaskNode
+
+    def test_top_level_package_exports_task_dependency_edge(self) -> None:
+        """TaskDependencyEdge is importable directly from the taskdependencygraph package."""
+        assert tdg_pkg.TaskDependencyEdge is TaskDependencyEdge
+
+    def test_top_level_package_exports_task_execution_status(self) -> None:
+        """TaskExecutionStatus is importable directly from the taskdependencygraph package."""
+        assert tdg_pkg.TaskExecutionStatus is TaskExecutionStatus
+
+    def test_top_level_package_exports_mermaid_gantt_config(self) -> None:
+        """MermaidGanttConfig is importable directly from the taskdependencygraph package."""
+        assert tdg_pkg.MermaidGanttConfig is MermaidGanttConfig
+
+    def test_top_level_package_exports_schedule_report(self) -> None:
+        """ScheduleReport and ScheduleEntry are importable from the taskdependencygraph package."""
+        assert tdg_pkg.ScheduleReport is ScheduleReport
+        assert tdg_pkg.ScheduleEntry is ScheduleEntry
+
+    def test_top_level_package_exports_validation_types(self) -> None:
+        """Validation types are importable from the taskdependencygraph package."""
+        assert tdg_pkg.ValidationCode is ValidationCode
+        assert tdg_pkg.GraphDefinitionValidationResult is GraphDefinitionValidationResult
+        assert tdg_pkg.GraphDefinitionValidationFinding is GraphDefinitionValidationFinding
+
+    def test_top_level_package_exports_artificial_node_constants_and_functions(self) -> None:
+        """Artificial node IDs and factory instances are importable from the top-level package."""
+        assert tdg_pkg.ID_OF_ARTIFICIAL_ENDNODE is ID_OF_ARTIFICIAL_ENDNODE
+        assert tdg_pkg.ID_OF_ARTIFICIAL_STARTNODE is ID_OF_ARTIFICIAL_STARTNODE
+        assert tdg_pkg.task_node_as_artificial_endnode is task_node_as_artificial_endnode
+        assert tdg_pkg.task_node_as_artificial_startnode is task_node_as_artificial_startnode
+
+    def test_top_level_package_exports_graph_preview_responses(self) -> None:
+        """AddNodeToGraphPreviewResponse and AddEdgeToGraphPreviewResponse are importable from top-level."""
+        assert tdg_pkg.AddNodeToGraphPreviewResponse is AddNodeToGraphPreviewResponse
+        assert tdg_pkg.AddEdgeToGraphPreviewResponse is AddEdgeToGraphPreviewResponse
