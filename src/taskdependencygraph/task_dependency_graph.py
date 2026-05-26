@@ -939,8 +939,8 @@ class TaskDependencyGraph:
         result: str = "digraph fahrplan{\nrankdir = LR;\nnode [shape=record fontname=Calibri];\n"
         result += "".join(self._get_task_dot(tid) for tid in self._graph.nodes().keys())
         result += "".join(
-            self._graph[successor][predecessor]["domain_model"].to_dot()
-            for successor, predecessor in self._graph.edges()
+            self._graph[predecessor][successor]["domain_model"].to_dot()
+            for predecessor, successor in self._graph.edges()
         )
         result += "}"
         # for debugging purposes you might copy the result from your IDE/Debugger and paste it here:

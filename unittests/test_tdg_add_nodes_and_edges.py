@@ -157,6 +157,7 @@ class TestCanEdgeBeAdded:
         result = graph.can_edge_be_added(edge)
         assert result.can_be_added is False
         assert result.error_message is not None
+        assert str(existing_id) in result.error_message
 
     def test_returns_false_for_duplicate_edge_pair(self) -> None:
         graph = copy.deepcopy(graph_anna)
@@ -167,6 +168,7 @@ class TestCanEdgeBeAdded:
         result = graph.can_edge_be_added(duplicate)
         assert result.can_be_added is False
         assert result.error_message is not None
+        assert str(task_A.id) in result.error_message
 
     def test_returns_false_for_opposite_edge(self) -> None:
         graph = copy.deepcopy(graph_anna)
@@ -177,6 +179,7 @@ class TestCanEdgeBeAdded:
         result = graph.can_edge_be_added(opposite)
         assert result.can_be_added is False
         assert result.error_message is not None
+        assert "Opposite" in result.error_message
 
     def test_returns_false_when_edge_would_create_cycle(self) -> None:
         graph = copy.deepcopy(graph_anna)

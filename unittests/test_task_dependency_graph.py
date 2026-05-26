@@ -1697,6 +1697,7 @@ class TestExtractSubgraphErrorMessages:
         with pytest.raises(ValueError) as raised:
             _ = full_graph.extract_sub_graph(task_S_milestone.id, task_T.id)
         assert "(end) is not a milestone" in str(raised.value)
+        assert str(task_T.id) in str(raised.value)
 
     def test_start_not_milestone_error_message_contains_parentheses(self) -> None:
         full_graph = copy.deepcopy(graph_ferdinand_with_milestones)
@@ -1704,6 +1705,7 @@ class TestExtractSubgraphErrorMessages:
         with pytest.raises(ValueError) as raised:
             _ = full_graph.extract_sub_graph(task_T.id, task_W_milestone.id)
         assert "(start) is not a milestone" in str(raised.value)
+        assert str(task_T.id) in str(raised.value)
 
 
 class TestToDot:
@@ -1722,7 +1724,7 @@ class TestToDot:
     def test_output_contains_node_entries(self) -> None:
         graph = copy.deepcopy(graph_ferdinand_with_milestones)
         dot = graph.to_dot()
-        assert f'"svg-{task_S_milestone.id}"' in dot or str(task_S_milestone.id) in dot
+        assert f'id="svg-{task_S_milestone.id}"' in dot
 
     def test_output_contains_edges_in_correct_direction(self) -> None:
         tdg = TaskDependencyGraph(
