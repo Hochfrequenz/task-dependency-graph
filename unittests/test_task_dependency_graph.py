@@ -1173,3 +1173,123 @@ class TestValidateDefinition:
         assert result.is_valid is False
         dup_findings = [f for f in result.findings if f.code == ValidationCode.DUPLICATE_EXTERNAL_ID]
         assert len(dup_findings) == 1
+
+
+# ---------------------------------------------------------------------------
+# Issue #88 – total slack per task
+# ---------------------------------------------------------------------------
+
+
+class TestTotalSlack:
+    """Tests for calculate_total_slack_of_task (issue #88)."""
+
+    def test_linear_graph_all_tasks_have_zero_slack(self) -> None:
+        """In a linear chain every task is on the critical path and has zero slack."""
+        a = _node("A", 10)
+        b = _node("B", 20)
+        c = _node("C", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b, c],
+            dependency_list=[_edge(a, b), _edge(b, c)],
+            starting_time_of_run=_T0,
+        )
+        assert tdg.calculate_total_slack_of_task(a.id) == timedelta(0)
+        assert tdg.calculate_total_slack_of_task(b.id) == timedelta(0)
+        assert tdg.calculate_total_slack_of_task(c.id) == timedelta(0)
+
+    def test_parallel_paths_shorter_has_positive_slack(self) -> None:
+        """The task on the shorter parallel path has positive total slack."""
+        short = _node("short", 5)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, end],
+            dependency_list=[_edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        # critical path: long (30) + end (5) = 35 min total
+        # short finishes at T0+5, end's LS = 30, so short has slack = 30 - 5 = 25 min
+        assert tdg.calculate_total_slack_of_task(long_.id) == timedelta(0)
+        assert tdg.calculate_total_slack_of_task(end.id) == timedelta(0)
+        assert tdg.calculate_total_slack_of_task(short.id) == timedelta(minutes=25)
+
+    def test_equal_length_parallel_paths_both_have_zero_slack(self) -> None:
+        """Two independent tasks of equal duration both lie on a longest path and have zero slack."""
+        a = _node("A", 10)
+        b = _node("B", 10)
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[], starting_time_of_run=_T0)
+        assert tdg.calculate_total_slack_of_task(a.id) == timedelta(0)
+        assert tdg.calculate_total_slack_of_task(b.id) == timedelta(0)
+
+    def test_milestone_on_critical_path_has_zero_slack(self) -> None:
+        """A zero-duration milestone on the critical path has zero total slack."""
+        a = _node("A", 20)
+        ms = _node("MS", 0, milestone=True)
+        b = _node("B", 10)
+        tdg = TaskDependencyGraph(
+            task_list=[a, ms, b],
+            dependency_list=[_edge(a, ms), _edge(ms, b)],
+            starting_time_of_run=_T0,
+        )
+        assert tdg.calculate_total_slack_of_task(ms.id) == timedelta(0)
+
+    def test_milestone_off_critical_path_has_positive_slack(self) -> None:
+        """A zero-duration milestone on the shorter parallel path has positive total slack."""
+        long_ = _node("long", 30)
+        ms = _node("MS", 0, milestone=True)
+        short = _node("short", 5)
+        # ms → short is the short path; long is independent; graph finish = 30 min
+        tdg = TaskDependencyGraph(
+            task_list=[long_, ms, short],
+            dependency_list=[_edge(ms, short)],
+            starting_time_of_run=_T0,
+        )
+        # short LS = 30 - 5 = 25; ms LF = LS(short) = 25; ms LS = 25 - 0 = 25
+        assert tdg.calculate_total_slack_of_task(ms.id) == timedelta(minutes=25)
+        assert tdg.calculate_total_slack_of_task(short.id) == timedelta(minutes=25)
+
+    def test_earliest_starttime_wait_gives_slack_to_predecessor(self) -> None:
+        """When a successor has earliest_starttime, its predecessor gains slack from the wait."""
+        early = datetime(2024, 6, 1, 9, 0, 0, tzinfo=timezone.utc)  # T0 + 60 min
+        a = _node("A", 10)
+        b = _node("B", 20, earliest_start=early)
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[_edge(a, b)], starting_time_of_run=_T0)
+        # A finishes at T0+10, B waits until T0+60, finishes at T0+80
+        # LS(B) = 80 - 20 = 60 → LF(A) = 60 → LS(A) = 60 - 10 = 50
+        assert tdg.calculate_total_slack_of_task(a.id) == timedelta(minutes=50)
+        assert tdg.calculate_total_slack_of_task(b.id) == timedelta(0)
+
+    def test_unknown_task_id_raises_value_error(self) -> None:
+        """An unrecognised task ID raises ValueError."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        with pytest.raises(ValueError):
+            tdg.calculate_total_slack_of_task(TaskId(uuid.uuid4()))
+
+    def test_artificial_node_id_raises_value_error(self) -> None:
+        """Artificial node IDs are not part of the public API and raise ValueError."""
+        task = _node("A", 10)
+        tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
+        with pytest.raises(ValueError):
+            tdg.calculate_total_slack_of_task(task_node_as_artificial_endnode.id)
+        with pytest.raises(ValueError):
+            tdg.calculate_total_slack_of_task(task_node_as_artificial_startnode.id)
+
+
+class TestScheduleEntryTotalSlack:
+    """Tests that total_slack is correctly included in ScheduleReport entries (issue #88)."""
+
+    def test_entry_total_slack_matches_calculate_total_slack(self) -> None:
+        """Each ScheduleEntry.total_slack matches calculate_total_slack_of_task."""
+        short = _node("short", 5)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, end],
+            dependency_list=[_edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        for task in [short, long_, end]:
+            assert by_id[task.id].total_slack == tdg.calculate_total_slack_of_task(task.id)

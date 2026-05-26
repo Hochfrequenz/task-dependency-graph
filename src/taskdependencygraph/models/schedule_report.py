@@ -25,6 +25,8 @@ class ScheduleEntry(BaseModel):
     planned_duration: timedelta
     is_milestone: bool
     is_on_critical_path: bool
+    total_slack: timedelta
+    """Maximum delay the task can absorb without pushing out the graph finish time."""
     predecessor_task_ids: list[TaskId]
     successor_task_ids: list[TaskId]
 

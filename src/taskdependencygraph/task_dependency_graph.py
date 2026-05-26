@@ -686,6 +686,55 @@ class TaskDependencyGraph:
             for tid in self.get_critical_path_task_ids(include_artificial_nodes=include_artificial_nodes)
         ]
 
+    def _compute_ls_minutes(self) -> dict[TaskId, float]:
+        """
+        Backward pass: returns the latest-start time (minutes from graph start) for every node.
+
+        Processes nodes in reverse topological order. For each node the latest finish is the
+        minimum latest-start of all direct successors; latest start = latest finish − duration.
+        Uses only planned_duration (not stretched edge weights) so that waiting time introduced
+        by earliest_starttime on a successor is correctly reflected as slack for its predecessors.
+        """
+        graph_finish_minutes: float = dag_longest_path_length(self._graph, weight="weight")
+        ls_minutes: dict[TaskId, float] = {}
+        for node in reversed(list(nx.topological_sort(self._graph))):
+            successors = list(self._graph.successors(node))
+            if not successors:
+                ls_minutes[node] = graph_finish_minutes
+            else:
+                lf = min(ls_minutes[s] for s in successors)
+                duration_min = self._graph.nodes[node]["domain_model"].planned_duration.total_seconds() / 60
+                ls_minutes[node] = lf - duration_min
+        return ls_minutes
+
+    def calculate_total_slack_of_task(self, task_id: TaskId) -> timedelta:
+        """
+        Returns the total slack of a task: the maximum amount of time by which the task's
+        planned start (or finish) can be delayed without pushing out the graph finish time.
+
+        A value of zero means the task lies on a critical path — any delay immediately delays
+        the whole graph. A positive value means the task can absorb that much delay without
+        affecting the graph finish.
+
+        Computed via a backward pass through the DAG (see _compute_ls_minutes): for each node
+        the latest allowable finish (LF) equals the minimum of the latest starts of all direct
+        successors, and latest start (LS) = LF − planned_duration. Total slack = LS − ES, where
+        ES is the existing planned-start calculation. Crucially, the backward pass uses only
+        planned_duration rather than the stretched edge weights, so waiting time introduced by an
+        earliest_starttime constraint on a successor is correctly counted as slack for the
+        predecessor rather than being consumed by the edge weight.
+
+        Raises ValueError for unknown task IDs and for the internal artificial start/end nodes,
+        which are not part of the public API.
+        """
+        if task_id not in self._graph.nodes or task_id in _ARTIFICIAL_NODE_IDS:
+            raise ValueError(f"Task with id {task_id!r} is not a real task in this graph")
+        ls_minutes = self._compute_ls_minutes()
+        es_minutes = (
+            self.calculate_planned_starting_time_of_task(task_id) - self._starting_time_of_run
+        ).total_seconds() / 60
+        return timedelta(minutes=ls_minutes[task_id] - es_minutes)
+
     def calculate_planned_finish_time_of_graph(self) -> AwareDatetime:
         """
         Returns the planned finish time of the entire graph — the moment the last task completes.
@@ -710,10 +759,11 @@ class TaskDependencyGraph:
         critical_path_ids = self.get_critical_path_task_ids(include_artificial_nodes=include_artificial_nodes)
         critical_path_set = set(critical_path_ids)
 
-        # Pre-compute all start times once to avoid repeated DAG traversals inside sort keys.
+        # Pre-compute all start times and latest-start times once to avoid repeated DAG traversals.
         start_cache: dict[TaskId, AwareDatetime] = {
             tid: self.calculate_planned_starting_time_of_task(tid) for tid in self._graph.nodes
         }
+        ls_minutes_cache: dict[TaskId, float] = self._compute_ls_minutes()
 
         def _task_sort_key(tid: TaskId) -> tuple[AwareDatetime, str, str]:
             task: TaskNode = self._graph.nodes[tid]["domain_model"]
@@ -730,6 +780,8 @@ class TaskDependencyGraph:
                 if task_id not in _ARTIFICIAL_NODE_IDS
                 else planned_start + task.planned_duration
             )
+            es_minutes = (planned_start - self._starting_time_of_run).total_seconds() / 60
+            total_slack = timedelta(minutes=ls_minutes_cache[task_id] - es_minutes)
 
             predecessor_ids = sorted(
                 [
@@ -760,6 +812,7 @@ class TaskDependencyGraph:
                     planned_duration=task.planned_duration,
                     is_milestone=task.is_milestone,
                     is_on_critical_path=task_id in critical_path_set,
+                    total_slack=total_slack,
                     predecessor_task_ids=predecessor_ids,
                     successor_task_ids=successor_ids,
                 )
