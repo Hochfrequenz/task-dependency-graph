@@ -1453,6 +1453,13 @@ class TestMermaidGanttConfig:
             assert f"title {cfg.title}" in output
             assert f"tickInterval {cfg.tick_interval}" in output
 
+
+# ---------------------------------------------------------------------------
+
+
+class TestMermaidGanttConfigValidation:
+    """Tests for MermaidGanttConfig field validation (construction-time enforcement)."""
+
     def test_empty_title_raises_validation_error(self) -> None:
         """An empty title string is rejected at construction time."""
         with pytest.raises(ValidationError):
