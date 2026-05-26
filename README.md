@@ -40,9 +40,7 @@ my_task = TaskNode(
     name="Shop groceries",  # human readable description
     external_id="some unique string",  # technical ID for those who don't like uuids ;)
     planned_duration=timedelta(minutes=15)  # how long it probably takes
-    # You may also add an assignees or an earliest_possible_start
-    # (The latter is useful, when e.g. the supermarket opens at 7am and you cannot shop groceries before,
-    # even if you were awake and have nothing else todo.)
+    # You may also add an assignee, phase, tags, earliest_starttime, is_milestone, or execution_status
 )
 ```
 
@@ -100,12 +98,14 @@ tdg = TaskDependencyGraph(
 )
 ```
 
-Now you can
+Once you have a graph, you can:
 
-* calculate at which time which task is scheduled to start depending on which predecessors it has,
-* find out which tasks are 'critical' in sense that if they're delayed, then the finishing time of the last node is also
-  delayed,
-* assign persons to tasks and check if any person has more than one task assigned at a time.
+* **Validate the definition** before construction — `TaskDependencyGraph.validate_definition(task_list, dependency_list)` checks for duplicate task/dependency IDs, duplicate external IDs, missing edge endpoints, invalid milestone durations, duplicate edge pairs, and cycles, returning a `GraphDefinitionValidationResult`.
+* **Get the full schedule** — `tdg.create_schedule_report()` returns a `ScheduleReport` with planned start/finish, critical-path flag, and total slack for every task.
+* **Inspect the critical path** — `tdg.get_critical_path_tasks()` returns the ordered list of `TaskNode` objects on the critical path.
+* **Calculate total slack** — `tdg.calculate_total_slack_of_task(task_id)` returns how much a task can slip without affecting the deadline.
+* **Query finish times** — `tdg.calculate_planned_finish_time_of_task(task_id)` and `tdg.calculate_planned_finish_time_of_graph()`.
+* Assign persons to tasks and check if any person has more than one task assigned at a time.
 
 Find a complete working example in [the demo unittest](unittests/test_demonstration.py).
 This demo test is also the basis for the following visualization examples.
@@ -165,6 +165,9 @@ The 🔶 are milestones which mark important moments in your project (often you 
 Shopping' done before starting with the next step, even though there's no "real" dependency between e.g. Cake Base and
 buying the strawberries.)
 The Gantt chart is useful to get an overview of your project and to identify which tasks are crucial.
+
+The Gantt output is customizable via `MermaidGanttConfig` — you can set the title, axis format, tick interval, and
+group tasks into sections by their `phase` field.
 
 ### Raw Graph ("dot" engine)
 
