@@ -816,6 +816,8 @@ class TaskDependencyGraph:
                         default=start_cache[task_node_as_artificial_endnode.id],
                     )
                     - planned_finish,
+                    late_start=self._starting_time_of_run + latest_start_cache[task_id],
+                    late_finish=self._starting_time_of_run + latest_start_cache[task_id] + task.planned_duration,
                     predecessor_task_ids=predecessor_ids,
                     successor_task_ids=successor_ids,
                 )
