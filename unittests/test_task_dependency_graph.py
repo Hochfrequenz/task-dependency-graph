@@ -1523,6 +1523,35 @@ class TestCalculateDelayImpact:
         assert by_id[task_K.id].additional_delay == timedelta(minutes=5)
         assert by_id[task_L.id].additional_delay == timedelta(minutes=5)
 
+    def test_artificial_node_id_raises(self) -> None:
+        """Passing an artificial start/end node ID raises ValueError."""
+        with pytest.raises(ValueError):
+            graph_daniel.calculate_delay_impact(task_node_as_artificial_startnode.id, timedelta(minutes=5))
+        with pytest.raises(ValueError):
+            graph_daniel.calculate_delay_impact(task_node_as_artificial_endnode.id, timedelta(minutes=5))
+
+    def test_earliest_starttime_task_on_critical_path(self) -> None:
+        """Delaying a task whose critical-path position is created by earliest_starttime propagates correctly.
+
+        In graph_emily, H has earliest_starttime=2024-01-02 giving it 0 total slack even though
+        its natural predecessor-based start is much earlier. total_slack and calculate_delay_impact
+        use consistent formulas for such tasks.
+
+        H delayed by 5 min (> total_slack=0): H, I, L are all pushed past their late finish.
+        J/K are not affected (they start long before L's critical path through H/I).
+        """
+        impacts = graph_emily.calculate_delay_impact(task_H_with_fixed_start_2024_01_02.id, timedelta(minutes=5))
+        by_id = {di.task_id: di for di in impacts}
+        assert task_H_with_fixed_start_2024_01_02.id in by_id
+        assert task_I.id in by_id
+        assert task_L.id in by_id
+        assert by_id[task_H_with_fixed_start_2024_01_02.id].additional_delay == timedelta(minutes=5)
+        assert by_id[task_I.id].additional_delay == timedelta(minutes=5)
+        assert by_id[task_L.id].additional_delay == timedelta(minutes=5)
+        # J and K have ~1419 min of total slack in graph_emily, so they are not affected.
+        assert task_J.id not in by_id
+        assert task_K.id not in by_id
+
 
 class TestCalculateDelayImpactPublicApi:
     """Verify DelayImpact is exported correctly from the public API (issue #115)."""

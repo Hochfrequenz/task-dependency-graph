@@ -16,6 +16,7 @@ import networkx as nx  # type: ignore[import-untyped]
 from networkx import DiGraph, dag_longest_path, dag_longest_path_length
 from pydantic import AwareDatetime
 
+from taskdependencygraph.models.delay_impact import DelayImpact
 from taskdependencygraph.models.graph_definition_validation import (
     GraphDefinitionValidationFinding,
     GraphDefinitionValidationResult,
@@ -25,7 +26,6 @@ from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.mermaid_gantt_config import MermaidGanttConfig
 from taskdependencygraph.models.schedule_report import ScheduleEntry, ScheduleReport
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
-from taskdependencygraph.models.delay_impact import DelayImpact
 from taskdependencygraph.models.task_dependency_update import (
     AddEdgeToGraphPreviewResponse,
     AddNodeToGraphPreviewResponse,
