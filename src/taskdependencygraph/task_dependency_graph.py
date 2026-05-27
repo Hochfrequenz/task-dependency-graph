@@ -3,6 +3,8 @@ TaskDependencyGraph
 """
 
 # pylint:disable=anomalous-backslash-in-string
+# pylint:disable=too-many-lines
+# pylint:disable=too-many-public-methods
 # The backslashes are part of an ASCII art embedded into a docstring.
 # pylint:disable=too-many-lines
 # pylint:disable=too-many-public-methods
@@ -16,6 +18,7 @@ import networkx as nx  # type: ignore[import-untyped]
 from networkx import DiGraph, dag_longest_path, dag_longest_path_length
 from pydantic import AwareDatetime
 
+from taskdependencygraph.models.delay_impact import DelayImpact
 from taskdependencygraph.models.graph_definition_validation import (
     GraphDefinitionValidationFinding,
     GraphDefinitionValidationResult,
@@ -914,6 +917,51 @@ class TaskDependencyGraph:
             critical_path_task_ids=critical_path_ids,
             entries=entries,
         )
+
+    def calculate_delay_impact(self, task_id: TaskId, delay: timedelta) -> list[DelayImpact]:
+        """
+        Returns the tasks whose planned finish would be pushed past their late finish if the
+        given task starts `delay` later than planned.
+
+        The delayed task itself appears first when the delay exceeds its own total slack. Tasks
+        whose total slack fully absorbs the propagated delay are omitted.
+
+        Propagation uses edge gaps: the slack between a predecessor's planned finish and a
+        successor's planned start absorbs part of the delay before it reaches the successor.
+
+        Raises ValueError if task_id is not a real task in this graph or delay is non-positive.
+        """
+        if delay <= timedelta(0):
+            raise ValueError(f"delay must be positive, got {delay}")
+        if task_id not in self._graph.nodes or task_id in _ARTIFICIAL_NODE_IDS:
+            raise ValueError(f"Task with id {task_id!r} is not a real task in this graph")
+        start_cache: dict[TaskId, AwareDatetime] = {
+            tid: self.calculate_planned_starting_time_of_task(tid) for tid in self._graph.nodes
+        }
+        latest_start_cache = self._compute_latest_start()
+        task_total_slack = latest_start_cache[task_id] - (start_cache[task_id] - self._starting_time_of_run)
+        if delay <= task_total_slack:
+            return []
+        prop_delay: dict[TaskId, timedelta] = {task_id: delay}
+        result: list[DelayImpact] = [DelayImpact(task_id=task_id, additional_delay=delay - task_total_slack)]
+        for node in nx.topological_sort(self._graph):
+            if node == task_id or node in _ARTIFICIAL_NODE_IDS:
+                continue
+            incoming = timedelta(0)
+            for p in self._graph.predecessors(node):
+                if p not in prop_delay:
+                    continue
+                p_duration: timedelta = self._graph.nodes[p]["domain_model"].planned_duration
+                edge_gap: timedelta = start_cache[node] - (start_cache[p] + p_duration)
+                incoming = max(incoming, timedelta(0), prop_delay[p] - edge_gap)
+            if incoming <= timedelta(0):
+                continue
+            prop_delay[node] = incoming
+            node_total_slack = latest_start_cache[node] - (start_cache[node] - self._starting_time_of_run)
+            node_additional_delay = max(timedelta(0), incoming - node_total_slack)
+            if node_additional_delay > timedelta(0):
+                result.append(DelayImpact(task_id=node, additional_delay=node_additional_delay))
+        return result
 
     def create_list_of_task_node_copies_with_planned_starting_time(self) -> list[TaskNode]:
         """

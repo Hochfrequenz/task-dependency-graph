@@ -1,5 +1,6 @@
 """models are python objects which we use to model tasks, dependencies and the graph they form"""
 
+from .delay_impact import DelayImpact
 from .graph_definition_validation import (
     GraphDefinitionValidationFinding,
     GraphDefinitionValidationResult,
@@ -24,6 +25,7 @@ from .task_node_as_artificial_startnode import ID_OF_ARTIFICIAL_STARTNODE, task_
 __all__ = [
     "AddEdgeToGraphPreviewResponse",
     "AddNodeToGraphPreviewResponse",
+    "DelayImpact",
     "RemoveEdgeFromGraphPreviewResponse",
     "RemoveNodeFromGraphPreviewResponse",
     "GraphDefinitionValidationFinding",
