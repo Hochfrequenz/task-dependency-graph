@@ -104,6 +104,15 @@ class TestRemoveTask:
         assert task_C.id not in task_ids
         assert task_A.id in task_ids
 
+    def test_remove_only_real_task_yields_empty_schedule(self) -> None:
+        """Removing the sole task from a single-task graph produces an empty schedule report."""
+        graph = copy.deepcopy(graph_anna)
+        # Remove all tasks one by one; after the last one the report must be empty.
+        for task_id in [task_B.id, task_C.id, task_D.id, task_A.id]:
+            graph.remove_task(task_id)
+        report = graph.create_schedule_report()
+        assert not report.entries
+
 
 class TestCanEdgeBeRemoved:
     def test_returns_true_for_existing_real_edge(self) -> None:
@@ -188,3 +197,16 @@ class TestRemoveEdge:
         report = graph.create_schedule_report()
         b_entry = next(e for e in report.entries if e.task_id == task_B_with_fixed_start_2024_01_02.id)
         assert b_entry.planned_start >= task_B_with_fixed_start_2024_01_02.earliest_starttime  # type: ignore[operator]
+
+    def test_remove_stretched_edge_preserves_earliest_starttime(self) -> None:
+        # Removing A→B_fixed (the edge whose weight is stretched by B_fixed's earliest_starttime)
+        # should not break scheduling: B_fixed becomes a root node but still respects its earliest_starttime.
+        graph = copy.deepcopy(graph_bernd)
+        edge_id = _get_edge_id(graph, task_A.id, task_B_with_fixed_start_2024_01_02.id)
+        graph.remove_edge(edge_id)
+        report = graph.create_schedule_report()
+        b_entry = next(e for e in report.entries if e.task_id == task_B_with_fixed_start_2024_01_02.id)
+        assert b_entry.planned_start >= task_B_with_fixed_start_2024_01_02.earliest_starttime  # type: ignore[operator]
+        # D must start after B_fixed finishes
+        d_entry = next(e for e in report.entries if e.task_id == task_D.id)
+        assert d_entry.planned_start >= b_entry.planned_finish
