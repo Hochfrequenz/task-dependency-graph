@@ -1421,6 +1421,32 @@ class TestScheduleEntryLateStartFinish:
         assert start_entry.late_start == start_entry.planned_start
         assert end_entry.late_start == end_entry.planned_start
 
+    def test_earliest_starttime_gives_predecessor_large_late_start(self) -> None:
+        """When a successor has earliest_starttime, its predecessor's late_start absorbs the wait.
+
+        A(10) → B(20, earliest_start=T0+60min)
+        graph_finish = 80min (A starts at T0, B starts at T0+60, finishes at T0+80)
+        Backward pass: LS(B)=60, LF(B)=80; LF(A)=LS(B)=60, LS(A)=60-10=50
+        So A has late_start = T0+50, late_finish = T0+60 even though planned_start = T0.
+        """
+        a = _node("A", 10)
+        b = _node("B", 20, earliest_start=_T0 + timedelta(minutes=60))
+        tdg = TaskDependencyGraph(
+            task_list=[a, b],
+            dependency_list=[_edge(a, b)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        # B has no slack (it is the critical path via earliest_starttime)
+        assert by_id[b.id].late_start == _T0 + timedelta(minutes=60)
+        assert by_id[b.id].late_finish == _T0 + timedelta(minutes=80)
+        # A's late_start is 50 min after T0, well above its planned_start (T0)
+        assert by_id[a.id].late_start == _T0 + timedelta(minutes=50)
+        assert by_id[a.id].late_finish == _T0 + timedelta(minutes=60)
+        # And total_slack = late_start - planned_start = 50 min
+        assert by_id[a.id].total_slack == timedelta(minutes=50)
+
 
 # ---------------------------------------------------------------------------
 # Issue #89 – configurable Mermaid Gantt output
