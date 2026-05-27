@@ -581,6 +581,11 @@ class TaskDependencyGraph:
     def can_task_be_removed(self, task_id: TaskId) -> RemoveNodeFromGraphPreviewResponse:
         """
         Returns information on whether a task can be removed from the graph.
+
+        A task can be removed if it exists and is not an internal artificial node.
+        Removing a task also removes all of its edges (predecessor and successor alike);
+        the graph is automatically re-wired with fresh artificial start/end edges after removal.
+        Use this method to check feasibility before calling remove_task.
         """
         if task_id in _ARTIFICIAL_NODE_IDS:
             return RemoveNodeFromGraphPreviewResponse(
@@ -610,6 +615,12 @@ class TaskDependencyGraph:
     def can_edge_be_removed(self, edge_id: TaskDependencyId) -> RemoveEdgeFromGraphPreviewResponse:
         """
         Returns information on whether an edge can be removed from the graph.
+
+        An edge can be removed if it exists and connects two real (non-artificial) tasks.
+        Removing an edge only removes the dependency between those two tasks; both tasks
+        remain in the graph. The graph is automatically re-wired with fresh artificial
+        start/end edges so that any task that loses its last real predecessor or successor
+        is still reachable. Use this method to check feasibility before calling remove_edge.
         """
         for u, v in self._graph.edges:
             if self._graph.edges[u, v]["domain_model"].id == edge_id:
