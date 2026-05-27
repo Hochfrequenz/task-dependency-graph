@@ -637,7 +637,8 @@ class TaskDependencyGraph:
             if self._graph.edges[u, v]["domain_model"].id == edge_id:
                 edge_to_remove = (u, v)
                 break
-        assert edge_to_remove is not None
+        if edge_to_remove is None:  # pragma: no cover
+            raise RuntimeError(f"Edge {edge_id} passed validation but could not be located — this is a bug")
         self._remove_artificial_nodes_and_edges()
         self._graph.remove_edge(*edge_to_remove)
         self._add_artificial_nodes_and_edges()
