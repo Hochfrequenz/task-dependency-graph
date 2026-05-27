@@ -1317,6 +1317,109 @@ class TestScheduleEntryTotalSlack:
             assert by_id[task.id].total_slack == tdg.calculate_total_slack_of_task(task.id)
 
 
+# Issue #114 – free_slack on ScheduleEntry
+# ---------------------------------------------------------------------------
+
+
+class TestScheduleEntryFreeSlack:
+    """Tests for free_slack on ScheduleEntry (issue #114).
+
+    Free slack formula:
+        free_slack(t) = min(planned_start(s) for real successors s) - planned_finish(t)
+        (use graph_finish when t has no real successors)
+
+    Key property: free_slack ≤ total_slack; on the critical path both are 0.
+    """
+
+    def test_critical_path_task_has_zero_free_slack(self) -> None:
+        """Tasks on the critical path have free_slack == 0."""
+        short = _node("short", 5)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, end],
+            dependency_list=[_edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        assert by_id[long_.id].free_slack == timedelta(0)
+        assert by_id[end.id].free_slack == timedelta(0)
+
+    def test_free_slack_never_exceeds_total_slack(self) -> None:
+        """free_slack ≤ total_slack for every task."""
+        short = _node("short", 5)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, end],
+            dependency_list=[_edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        for entry in report.entries:
+            assert entry.free_slack <= entry.total_slack
+
+    def test_task_with_no_real_successor_uses_graph_finish(self) -> None:
+        """A task with no real successors has free_slack == graph_finish - planned_finish."""
+        a = _node("A", 10)
+        b = _node("B", 10)
+        tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[], starting_time_of_run=_T0)
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        # both tasks have no real successor; graph_finish = T0+10; both finish at T0+10
+        assert by_id[a.id].free_slack == timedelta(0)
+        assert by_id[b.id].free_slack == timedelta(0)
+
+    def test_concrete_values_graph_daniel(self) -> None:
+        """Verify exact free_slack for graph_daniel.
+
+        graph_daniel:
+             H(10)----I(10)
+            /              \\
+        G(1)                 L(5)
+           \\               /
+            J(20)----K(20)
+
+        Early starts: G=0, H=1, J=1, I=11, K=21, L=41; finish: G=1, H=11, I=21, J=21, K=41, L=46.
+        free_slack:
+          G: min(start[H], start[J]) - finish[G] = min(1,1) - 1 = 0
+          H: start[I] - finish[H] = 11 - 11 = 0
+          J: start[K] - finish[J] = 21 - 21 = 0
+          I: start[L] - finish[I] = 41 - 21 = 20
+          K: start[L] - finish[K] = 41 - 41 = 0
+          L: graph_finish - finish[L] = 46 - 46 = 0
+        """
+        report = graph_daniel.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        assert by_id[task_G.id].free_slack == timedelta(0)
+        assert by_id[task_H.id].free_slack == timedelta(0)
+        assert by_id[task_J.id].free_slack == timedelta(0)
+        assert by_id[task_I.id].free_slack == timedelta(minutes=20)
+        assert by_id[task_K.id].free_slack == timedelta(0)
+        assert by_id[task_L.id].free_slack == timedelta(0)
+
+    def test_free_slack_with_parallel_converge(self) -> None:
+        """Task converging into a later join has positive free_slack."""
+        # A(5) and B(20) both feed C(5).
+        # C starts at T0+20 (waits for B).
+        # free_slack[A] = start[C] - finish[A] = 20 - 5 = 15 min
+        # total_slack[A] = 15 min (same here since C is the only successor)
+        a = _node("A", 5)
+        b = _node("B", 20)
+        c = _node("C", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[a, b, c],
+            dependency_list=[_edge(a, c), _edge(b, c)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        assert by_id[a.id].free_slack == timedelta(minutes=15)
+        assert by_id[b.id].free_slack == timedelta(0)
+        assert by_id[c.id].free_slack == timedelta(0)
+
+
 # ---------------------------------------------------------------------------
 # Issue #116 – late_start and late_finish on ScheduleEntry
 # ---------------------------------------------------------------------------

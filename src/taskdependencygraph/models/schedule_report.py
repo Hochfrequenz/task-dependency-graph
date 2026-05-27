@@ -27,6 +27,8 @@ class ScheduleEntry(BaseModel):
     is_on_critical_path: bool
     total_slack: timedelta
     """Maximum delay the task can absorb without pushing out the graph finish time."""
+    free_slack: timedelta
+    """Maximum delay the task can absorb without delaying the earliest start of any direct successor."""
     late_start: AwareDatetime
     """Latest the task can start without delaying the project finish time."""
     late_finish: AwareDatetime
