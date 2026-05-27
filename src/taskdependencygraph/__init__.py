@@ -11,6 +11,7 @@ from .models import (
     ID_OF_ARTIFICIAL_STARTNODE,
     AddEdgeToGraphPreviewResponse,
     AddNodeToGraphPreviewResponse,
+    DelayImpact,
     GraphDefinitionValidationFinding,
     GraphDefinitionValidationResult,
     MermaidGanttConfig,
@@ -35,6 +36,7 @@ from .task_dependency_graph import TaskDependencyGraph
 __all__ = [
     "AddEdgeToGraphPreviewResponse",
     "AddNodeToGraphPreviewResponse",
+    "DelayImpact",
     "GraphDefinitionValidationFinding",
     "GraphDefinitionValidationResult",
     "ID_OF_ARTIFICIAL_ENDNODE",

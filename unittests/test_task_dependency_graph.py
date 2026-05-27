@@ -13,6 +13,7 @@ from taskdependencygraph.models import (
     ID_OF_ARTIFICIAL_STARTNODE,
     AddEdgeToGraphPreviewResponse,
     AddNodeToGraphPreviewResponse,
+    DelayImpact,
     GraphDefinitionValidationFinding,
     GraphDefinitionValidationResult,
     MermaidGanttConfig,
@@ -1419,6 +1420,120 @@ class TestScheduleEntryFreeSlack:
         assert by_id[a.id].free_slack == timedelta(minutes=15)
         assert by_id[b.id].free_slack == timedelta(0)
         assert by_id[c.id].free_slack == timedelta(0)
+
+
+# ---------------------------------------------------------------------------
+# Issue #115 – calculate_delay_impact
+# ---------------------------------------------------------------------------
+
+
+class TestCalculateDelayImpact:
+    """Tests for TaskDependencyGraph.calculate_delay_impact (issue #115).
+
+    Uses graph_daniel:
+         H(10)----I(10)
+        /              \\
+    G(1)                 L(5)
+       \\               /
+        J(20)----K(20)
+
+    Early starts (minutes from T0):  G=0, H=1, J=1, I=11, K=21, L=41
+    Total slack (minutes):           G=0, H=20, J=0, I=20, K=0, L=0
+    Edge gaps (minutes):             G→H=0, H→I=0, G→J=0, J→K=0, I→L=20, K→L=0
+    """
+
+    def test_non_positive_delay_raises(self) -> None:
+        """Zero or negative delay is rejected."""
+        with pytest.raises(ValueError, match="delay must be positive"):
+            graph_daniel.calculate_delay_impact(task_G.id, timedelta(0))
+        with pytest.raises(ValueError, match="delay must be positive"):
+            graph_daniel.calculate_delay_impact(task_G.id, timedelta(minutes=-1))
+
+    def test_unknown_task_id_raises(self) -> None:
+        """A task id not in the graph raises ValueError."""
+        with pytest.raises(ValueError):
+            graph_daniel.calculate_delay_impact(TaskId(uuid.uuid4()), timedelta(minutes=5))
+
+    def test_delay_within_total_slack_returns_empty(self) -> None:
+        """Delay ≤ total_slack of the delayed task produces no impacts."""
+        # H has 20 min total slack; a 20 min delay is absorbed entirely.
+        assert not graph_daniel.calculate_delay_impact(task_H.id, timedelta(minutes=20))
+
+    def test_delayed_task_included_when_delay_exceeds_slack(self) -> None:
+        """The delayed task itself appears in the result when delay > its total_slack."""
+        impacts = graph_daniel.calculate_delay_impact(task_H.id, timedelta(minutes=21))
+        task_ids = [di.task_id for di in impacts]
+        assert task_H.id in task_ids
+
+    def test_downstream_critical_tasks_included(self) -> None:
+        """Tasks on the critical path downstream of the delayed task are included."""
+        # J has 0 slack; delay J by 5 min → J, K, L all exceed their late finish.
+        impacts = graph_daniel.calculate_delay_impact(task_J.id, timedelta(minutes=5))
+        task_ids = {di.task_id for di in impacts}
+        assert task_J.id in task_ids
+        assert task_K.id in task_ids
+        assert task_L.id in task_ids
+
+    def test_non_critical_predecessors_absorbed_by_slack(self) -> None:
+        """Tasks with sufficient slack absorb the propagated delay without appearing in the result.
+
+        G has no total slack, but H and I each have 20 min slack. A 10 min delay to G
+        propagates to J→K→L (0 slack each) but is fully absorbed by H and I.
+        """
+        impacts = graph_daniel.calculate_delay_impact(task_G.id, timedelta(minutes=10))
+        task_ids = {di.task_id for di in impacts}
+        assert task_H.id not in task_ids
+        assert task_I.id not in task_ids
+        assert task_G.id in task_ids
+        assert task_J.id in task_ids
+        assert task_K.id in task_ids
+        assert task_L.id in task_ids
+
+    def test_edge_gap_absorbs_propagated_delay_at_join(self) -> None:
+        """The 20-min edge gap from I to L absorbs a 10-min propagated delay through the H path.
+
+        G delayed by 10 min: I gets prop_delay=10 but edge_gap[I→L]=20, so L receives
+        0 additional delay from that path. L is still hit via K (0 edge gap on K→L).
+        """
+        impacts = graph_daniel.calculate_delay_impact(task_G.id, timedelta(minutes=10))
+        by_id = {di.task_id: di for di in impacts}
+        # L is reached via K (edge gap 0), not via I (edge gap 20 > 10)
+        assert task_L.id in by_id
+        assert by_id[task_L.id].additional_delay == timedelta(minutes=10)
+
+    def test_additional_delay_values(self) -> None:
+        """Exact additional_delay values for H delayed by 25 min.
+
+        H has 20 min slack → additional_delay[H] = 5.
+        I inherits full prop_delay=25; I has 20 min slack → additional_delay[I] = 5.
+        L: from I edge_gap=20 gives incoming=5, from K (not delayed) gives 0 → additional_delay[L] = 5.
+        """
+        impacts = graph_daniel.calculate_delay_impact(task_H.id, timedelta(minutes=25))
+        by_id = {di.task_id: di for di in impacts}
+        assert set(by_id.keys()) == {task_H.id, task_I.id, task_L.id}
+        assert by_id[task_H.id].additional_delay == timedelta(minutes=5)
+        assert by_id[task_I.id].additional_delay == timedelta(minutes=5)
+        assert by_id[task_L.id].additional_delay == timedelta(minutes=5)
+
+    def test_critical_path_delay_cascades_fully(self) -> None:
+        """Delaying a critical-path task cascades the full delay to all downstream tasks."""
+        impacts = graph_daniel.calculate_delay_impact(task_J.id, timedelta(minutes=5))
+        by_id = {di.task_id: di for di in impacts}
+        assert by_id[task_J.id].additional_delay == timedelta(minutes=5)
+        assert by_id[task_K.id].additional_delay == timedelta(minutes=5)
+        assert by_id[task_L.id].additional_delay == timedelta(minutes=5)
+
+
+class TestCalculateDelayImpactPublicApi:
+    """Verify DelayImpact is exported correctly from the public API (issue #115)."""
+
+    def test_delay_impact_importable_from_models(self) -> None:
+        """DelayImpact is importable from taskdependencygraph.models."""
+        assert tdg_models.DelayImpact is DelayImpact
+
+    def test_delay_impact_importable_from_top_level(self) -> None:
+        """DelayImpact is importable directly from the taskdependencygraph package."""
+        assert tdg_pkg.DelayImpact is DelayImpact
 
 
 # ---------------------------------------------------------------------------
