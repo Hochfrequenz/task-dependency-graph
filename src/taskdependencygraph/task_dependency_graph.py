@@ -4,6 +4,8 @@ TaskDependencyGraph
 
 # pylint:disable=anomalous-backslash-in-string
 # The backslashes are part of an ASCII art embedded into a docstring.
+# pylint:disable=too-many-lines
+# pylint:disable=too-many-public-methods
 import copy
 import uuid
 from datetime import datetime, timedelta
@@ -26,6 +28,8 @@ from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
 from taskdependencygraph.models.task_dependency_update import (
     AddEdgeToGraphPreviewResponse,
     AddNodeToGraphPreviewResponse,
+    RemoveEdgeFromGraphPreviewResponse,
+    RemoveNodeFromGraphPreviewResponse,
 )
 from taskdependencygraph.models.task_node import TaskNode
 from taskdependencygraph.models.task_node_as_artificial_endnode import task_node_as_artificial_endnode
@@ -571,6 +575,83 @@ class TaskDependencyGraph:
             / 60,
             domain_model=task_dependency,
         )
+        self._add_artificial_nodes_and_edges()
+        self._account_for_earliest_start()
+
+    def can_task_be_removed(self, task_id: TaskId) -> RemoveNodeFromGraphPreviewResponse:
+        """
+        Returns information on whether a task can be removed from the graph.
+
+        A task can be removed if it exists and is not an internal artificial node.
+        Removing a task also removes all of its edges (predecessor and successor alike);
+        the graph is automatically re-wired with fresh artificial start/end edges after removal.
+        Use this method to check feasibility before calling remove_task.
+        """
+        if task_id in _ARTIFICIAL_NODE_IDS:
+            return RemoveNodeFromGraphPreviewResponse(
+                can_be_removed=False,
+                error_message=f"Node with id {task_id} is an internal artificial node and cannot be removed",
+            )
+        if task_id not in self._graph.nodes:
+            return RemoveNodeFromGraphPreviewResponse(
+                can_be_removed=False,
+                error_message=f"Node with id {task_id} does not exist in the graph",
+            )
+        return RemoveNodeFromGraphPreviewResponse(can_be_removed=True, error_message=None)
+
+    def remove_task(self, task_id: TaskId) -> None:
+        """
+        Removes a task and all its edges from the graph.
+        Raises ValueError if the task does not exist or is an artificial node.
+        """
+        check_result = self.can_task_be_removed(task_id)
+        if not check_result.can_be_removed:
+            raise ValueError(check_result.error_message)
+        self._remove_artificial_nodes_and_edges()
+        self._graph.remove_node(task_id)
+        self._add_artificial_nodes_and_edges()
+        self._account_for_earliest_start()
+
+    def can_edge_be_removed(self, edge_id: TaskDependencyId) -> RemoveEdgeFromGraphPreviewResponse:
+        """
+        Returns information on whether an edge can be removed from the graph.
+
+        An edge can be removed if it exists and connects two real (non-artificial) tasks.
+        Removing an edge only removes the dependency between those two tasks; both tasks
+        remain in the graph. The graph is automatically re-wired with fresh artificial
+        start/end edges so that any task that loses its last real predecessor or successor
+        is still reachable. Use this method to check feasibility before calling remove_edge.
+        """
+        for u, v in self._graph.edges:
+            if self._graph.edges[u, v]["domain_model"].id == edge_id:
+                if u in _ARTIFICIAL_NODE_IDS or v in _ARTIFICIAL_NODE_IDS:
+                    return RemoveEdgeFromGraphPreviewResponse(
+                        can_be_removed=False,
+                        error_message=f"Edge with id {edge_id} is an internal artificial edge and cannot be removed",
+                    )
+                return RemoveEdgeFromGraphPreviewResponse(can_be_removed=True, error_message=None)
+        return RemoveEdgeFromGraphPreviewResponse(
+            can_be_removed=False,
+            error_message=f"Edge with id {edge_id} does not exist in the graph",
+        )
+
+    def remove_edge(self, edge_id: TaskDependencyId) -> None:
+        """
+        Removes an edge from the graph by its ID.
+        Raises ValueError if the edge does not exist or is an artificial edge.
+        """
+        check_result = self.can_edge_be_removed(edge_id)
+        if not check_result.can_be_removed:
+            raise ValueError(check_result.error_message)
+        edge_to_remove: tuple[TaskId, TaskId] | None = None
+        for u, v in self._graph.edges:
+            if self._graph.edges[u, v]["domain_model"].id == edge_id:
+                edge_to_remove = (u, v)
+                break
+        if edge_to_remove is None:  # pragma: no cover
+            raise RuntimeError(f"Edge {edge_id} passed validation but could not be located — this is a bug")
+        self._remove_artificial_nodes_and_edges()
+        self._graph.remove_edge(*edge_to_remove)
         self._add_artificial_nodes_and_edges()
         self._account_for_earliest_start()
 
