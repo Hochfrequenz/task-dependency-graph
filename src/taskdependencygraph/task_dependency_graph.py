@@ -811,6 +811,8 @@ class TaskDependencyGraph:
                     is_milestone=task.is_milestone,
                     is_on_critical_path=task_id in critical_path_set,
                     total_slack=latest_start_cache[task_id] - (planned_start - self._starting_time_of_run),
+                    late_start=self._starting_time_of_run + latest_start_cache[task_id],
+                    late_finish=self._starting_time_of_run + latest_start_cache[task_id] + task.planned_duration,
                     predecessor_task_ids=predecessor_ids,
                     successor_task_ids=successor_ids,
                 )
