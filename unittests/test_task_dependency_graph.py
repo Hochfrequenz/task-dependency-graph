@@ -62,6 +62,7 @@ from .example_tdgs import (
     task_C,
     task_D,
     task_G,
+    task_H,
     task_H_with_fixed_start_2024_01_02,
     task_I,
     task_J,
@@ -1314,6 +1315,137 @@ class TestScheduleEntryTotalSlack:
         by_id = {e.task_id: e for e in report.entries}
         for task in [short, long_, end]:
             assert by_id[task.id].total_slack == tdg.calculate_total_slack_of_task(task.id)
+
+
+# ---------------------------------------------------------------------------
+# Issue #116 – late_start and late_finish on ScheduleEntry
+# ---------------------------------------------------------------------------
+
+
+class TestScheduleEntryLateStartFinish:
+    """Tests for late_start and late_finish fields on ScheduleEntry (issue #116).
+
+    Backward-pass formulas:
+        late_finish(t) = min(late_start(s) for s in successors(t))   [graph_finish if no successors]
+        late_start(t)  = late_finish(t) − planned_duration(t)
+    """
+
+    def test_critical_path_task_late_start_equals_planned_start(self) -> None:
+        """On the critical path total_slack == 0, so late_start == planned_start."""
+        short = _node("short", 5)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, end],
+            dependency_list=[_edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        for task in [long_, end]:
+            assert by_id[task.id].late_start == by_id[task.id].planned_start
+
+    def test_off_critical_path_task_late_start_equals_planned_start_plus_total_slack(self) -> None:
+        """For a non-critical task: late_start == planned_start + total_slack."""
+        short = _node("short", 5)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, end],
+            dependency_list=[_edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        entry = by_id[short.id]
+        assert entry.late_start == entry.planned_start + entry.total_slack
+
+    def test_late_finish_equals_late_start_plus_duration(self) -> None:
+        """late_finish == late_start + planned_duration for every task."""
+        short = _node("short", 5)
+        long_ = _node("long", 30)
+        end = _node("end", 5)
+        tdg = TaskDependencyGraph(
+            task_list=[short, long_, end],
+            dependency_list=[_edge(short, end), _edge(long_, end)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        for entry in report.entries:
+            assert entry.late_finish == entry.late_start + entry.planned_duration
+
+    def test_concrete_values_graph_daniel(self) -> None:
+        """Verify exact late_start / late_finish values for graph_daniel.
+
+        graph_daniel (starting 2024-01-01T00:00Z):
+             H(10)----I(10)
+            /              \\
+        G(1)                 L(5)
+           \\               /
+            J(20)----K(20)
+
+        Critical path G→J→K→L = 1+20+20+5 = 46 min.
+        Backward pass (all in minutes from start):
+          late_start[G]=0, late_start[J]=1, late_start[K]=21, late_start[L]=41
+          late_start[H]=21, late_start[I]=31
+        """
+        t0 = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        report = graph_daniel.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+
+        def _t(minutes: int) -> datetime:
+            return t0 + timedelta(minutes=minutes)
+
+        assert by_id[task_G.id].late_start == _t(0)
+        assert by_id[task_G.id].late_finish == _t(1)
+        assert by_id[task_J.id].late_start == _t(1)
+        assert by_id[task_J.id].late_finish == _t(21)
+        assert by_id[task_K.id].late_start == _t(21)
+        assert by_id[task_K.id].late_finish == _t(41)
+        assert by_id[task_L.id].late_start == _t(41)
+        assert by_id[task_L.id].late_finish == _t(46)
+        # off-critical-path tasks
+        assert by_id[task_H.id].late_start == _t(21)
+        assert by_id[task_H.id].late_finish == _t(31)
+        assert by_id[task_I.id].late_start == _t(31)
+        assert by_id[task_I.id].late_finish == _t(41)
+
+    def test_artificial_nodes_have_zero_slack_in_late_fields(self) -> None:
+        """Artificial start/end nodes have late_start == planned_start (slack = 0)."""
+        short = _node("short", 5)
+        tdg = TaskDependencyGraph(task_list=[short], dependency_list=[], starting_time_of_run=_T0)
+        report = tdg.create_schedule_report(include_artificial_nodes=True)
+        by_id = {e.task_id: e for e in report.entries}
+        start_entry = by_id[task_node_as_artificial_startnode.id]
+        end_entry = by_id[task_node_as_artificial_endnode.id]
+        assert start_entry.late_start == start_entry.planned_start
+        assert end_entry.late_start == end_entry.planned_start
+
+    def test_earliest_starttime_gives_predecessor_large_late_start(self) -> None:
+        """When a successor has earliest_starttime, its predecessor's late_start absorbs the wait.
+
+        A(10) → B(20, earliest_start=T0+60min)
+        graph_finish = 80min (A starts at T0, B starts at T0+60, finishes at T0+80)
+        Backward pass: LS(B)=60, LF(B)=80; LF(A)=LS(B)=60, LS(A)=60-10=50
+        So A has late_start = T0+50, late_finish = T0+60 even though planned_start = T0.
+        """
+        a = _node("A", 10)
+        b = _node("B", 20, earliest_start=_T0 + timedelta(minutes=60))
+        tdg = TaskDependencyGraph(
+            task_list=[a, b],
+            dependency_list=[_edge(a, b)],
+            starting_time_of_run=_T0,
+        )
+        report = tdg.create_schedule_report()
+        by_id = {e.task_id: e for e in report.entries}
+        # B has no slack (it is the critical path via earliest_starttime)
+        assert by_id[b.id].late_start == _T0 + timedelta(minutes=60)
+        assert by_id[b.id].late_finish == _T0 + timedelta(minutes=80)
+        # A's late_start is 50 min after T0, well above its planned_start (T0)
+        assert by_id[a.id].late_start == _T0 + timedelta(minutes=50)
+        assert by_id[a.id].late_finish == _T0 + timedelta(minutes=60)
+        # And total_slack = late_start - planned_start = 50 min
+        assert by_id[a.id].total_slack == timedelta(minutes=50)
 
 
 # ---------------------------------------------------------------------------
