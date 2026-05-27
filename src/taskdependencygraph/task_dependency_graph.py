@@ -811,6 +811,15 @@ class TaskDependencyGraph:
                     is_milestone=task.is_milestone,
                     is_on_critical_path=task_id in critical_path_set,
                     total_slack=latest_start_cache[task_id] - (planned_start - self._starting_time_of_run),
+                    free_slack=min(
+                        (
+                            start_cache[s]
+                            for s in self._graph.successors(task_id)
+                            if s not in _ARTIFICIAL_NODE_IDS
+                        ),
+                        default=start_cache[task_node_as_artificial_endnode.id],
+                    )
+                    - planned_finish,
                     predecessor_task_ids=predecessor_ids,
                     successor_task_ids=successor_ids,
                 )
