@@ -3,6 +3,9 @@ When using the Task Dependency Graph in an application, these models are helpful
 the can or cannot add a task/node or dependency/edge to the graph.
 """
 
+# pylint:disable=duplicate-code
+# The __all__ list mirrors the one in models/__init__.py; that's intentional re-export, not a bug.
+
 from typing import Self
 
 from pydantic import BaseModel, model_validator
@@ -58,4 +61,59 @@ class AddEdgeToGraphPreviewResponse(BaseModel):
         raise ValueError("If the task can not be added, an error message must be provided")
 
 
-__all__ = ["AddEdgeToGraphPreviewResponse", "AddNodeToGraphPreviewResponse"]
+class RemoveNodeFromGraphPreviewResponse(BaseModel):
+    """
+    Response to the frontends' request to potentially remove a node from the TDG.
+    It's named 'preview' because the node is not actually removed from the TDG yet.
+    """
+
+    can_be_removed: bool
+    """
+    true iff the node can be removed from the TDG
+    """
+    error_message: str | None = None
+    """
+    error message if the node cannot be removed from the TDG
+    """
+
+    @model_validator(mode="after")
+    def validate_there_is_an_error_message_if_necessary(self) -> Self:
+        """
+        Ensure that an error message is provided if the node cannot be removed
+        """
+        if self.can_be_removed is True or (self.can_be_removed is False and self.error_message):
+            return self
+        raise ValueError("If the task can not be removed, an error message must be provided")
+
+
+class RemoveEdgeFromGraphPreviewResponse(BaseModel):
+    """
+    Response to the frontends' request to potentially remove an edge from the TDG.
+    It's named 'preview' because the edge is not actually removed from the TDG yet.
+    """
+
+    can_be_removed: bool
+    """
+    true iff the edge can be removed from the TDG
+    """
+    error_message: str | None = None
+    """
+    error message if the edge cannot be removed from the TDG
+    """
+
+    @model_validator(mode="after")
+    def validate_there_is_an_error_message_if_necessary(self) -> Self:
+        """
+        Ensure that an error message is provided if the edge cannot be removed
+        """
+        if self.can_be_removed is True or (self.can_be_removed is False and self.error_message):
+            return self
+        raise ValueError("If the edge can not be removed, an error message must be provided")
+
+
+__all__ = [
+    "AddEdgeToGraphPreviewResponse",
+    "AddNodeToGraphPreviewResponse",
+    "RemoveEdgeFromGraphPreviewResponse",
+    "RemoveNodeFromGraphPreviewResponse",
+]

@@ -11,7 +11,12 @@ from .mermaid_gantt_config import MermaidGanttConfig
 from .person import Person
 from .schedule_report import ScheduleEntry, ScheduleReport
 from .task_dependency_edge import TaskDependencyEdge
-from .task_dependency_update import AddEdgeToGraphPreviewResponse, AddNodeToGraphPreviewResponse
+from .task_dependency_update import (
+    AddEdgeToGraphPreviewResponse,
+    AddNodeToGraphPreviewResponse,
+    RemoveEdgeFromGraphPreviewResponse,
+    RemoveNodeFromGraphPreviewResponse,
+)
 from .task_execution_status import TaskExecutionStatus
 from .task_node import TaskNode
 from .task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE, task_node_as_artificial_endnode
@@ -21,6 +26,8 @@ __all__ = [
     "AddEdgeToGraphPreviewResponse",
     "AddNodeToGraphPreviewResponse",
     "DelayImpact",
+    "RemoveEdgeFromGraphPreviewResponse",
+    "RemoveNodeFromGraphPreviewResponse",
     "GraphDefinitionValidationFinding",
     "GraphDefinitionValidationResult",
     "ID_OF_ARTIFICIAL_ENDNODE",

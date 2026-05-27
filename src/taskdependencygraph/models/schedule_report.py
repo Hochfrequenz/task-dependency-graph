@@ -29,6 +29,10 @@ class ScheduleEntry(BaseModel):
     """Maximum delay the task can absorb without pushing out the graph finish time."""
     free_slack: timedelta
     """Maximum delay the task can absorb without delaying the earliest start of any direct successor."""
+    late_start: AwareDatetime
+    """Latest the task can start without delaying the project finish time."""
+    late_finish: AwareDatetime
+    """Latest the task can finish without delaying the project finish time."""
     predecessor_task_ids: list[TaskId]
     successor_task_ids: list[TaskId]
 
