@@ -34,7 +34,7 @@ tests = [
     # "syrupy==4.8.2"
 ]
 linting = [
-    "pylint==4.0.5"
+    "pylint==4.0.6"
 ]
 type_check = [
     "mypy==2.1.0",
