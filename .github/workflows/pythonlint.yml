@@ -6,21 +6,30 @@ on:
   pull_request: {}
 jobs:
   pylint:
-    name: Python Code Quality and Lint
+    name: "Python Code Quality and Lint (${{ matrix.group }})"
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        linter-env: ["linting", "type_check", "spell_check"]
+        include:
+          - group: linting
+            commands: |
+              uv run pylint taskdependencygraph
+              uv run pylint unittests --rcfile=unittests/.pylintrc
+          - group: type_check
+            commands: |
+              uv run mypy --show-error-codes src/taskdependencygraph --strict
+              uv run mypy --show-error-codes unittests --strict
+          - group: spell_check
+            commands: |
+              uv run codespell --ignore-words=domain-specific-terms.txt src
+              uv run codespell --ignore-words=domain-specific-terms.txt README.md
     steps:
       - uses: actions/checkout@v6
-      - name: Set up Python 3.14
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v9.0.0
         with:
           python-version: "3.14"
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install tox
-      - name: Run ${{ matrix.linter-env }} via Tox
-        run: |
-          tox -e ${{ matrix.linter-env }}
+      - name: Install dependencies
+        run: uv sync --group ${{ matrix.group }}
+      - name: Run ${{ matrix.group }} via uv
+        run: ${{ matrix.commands }}
