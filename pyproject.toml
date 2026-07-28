@@ -38,7 +38,7 @@ tests = [
     # "syrupy==4.8.2"
 ]
 linting = [
-    "pylint==4.0.5",
+    "pylint==4.0.6",
     {include-group = "tests"},
 ]
 type_check = [
