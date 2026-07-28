@@ -34,7 +34,7 @@ Homepage = "https://github.com/Hochfrequenz/task-dependency-graph"
 tests = [
     "pytest==8.4.2",
     "pytest-asyncio==1.4.0",
-    "testcontainers==4.14.2",  # pin: last version verified against conftest.py's use of wait_container_is_ready
+    "testcontainers",
     # "syrupy==4.8.2"
 ]
 linting = [

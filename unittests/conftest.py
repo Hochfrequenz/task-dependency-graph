@@ -3,9 +3,9 @@ from typing import AsyncGenerator, Generator
 import pytest
 from docker.errors import DockerException
 from pydantic import HttpUrl
-from testcontainers.core.container import DockerContainer  # type: ignore[import-untyped]
-from testcontainers.core.network import Network  # type: ignore[import-untyped]
-from testcontainers.core.waiting_utils import wait_container_is_ready, wait_for_logs  # type: ignore[import-untyped]
+from testcontainers.core.container import DockerContainer
+from testcontainers.core.network import Network
+from testcontainers.core.waiting_utils import wait_for_logs
 
 from taskdependencygraph.plotting.kroki import KrokiClient, KrokiConfig
 
@@ -13,7 +13,7 @@ _KROKI_INTERNAL_PORT = 8000
 
 
 @pytest.fixture(scope="session")
-def docker_network() -> Network:
+def docker_network() -> Generator[Network, None, None]:
     """Creates a shared Docker network for inter-container communication."""
     try:
         network = Network()
@@ -41,11 +41,10 @@ def start_kroki_on_localhost(docker_network: Network) -> Generator[int, None, No
     mermaid.with_network(docker_network)
     mermaid.with_network_aliases("mermaid")
     mermaid.start()
-    wait_container_is_ready(mermaid)
+    wait_for_logs(mermaid, "Succeeded in deploying verticle")  # this was just a guess, but it seems to work :)
     kroki.with_env("KROKI_MERMAID_HOST", "mermaid")
     kroki.with_exposed_ports(_KROKI_INTERNAL_PORT)
     kroki.start()
-    wait_container_is_ready(kroki)
     wait_for_logs(kroki, "Succeeded in deploying verticle")  # this was just a guess, but it seems to work :)
     port_on_localhost = kroki.get_exposed_port(_KROKI_INTERNAL_PORT)
     yield int(port_on_localhost)
