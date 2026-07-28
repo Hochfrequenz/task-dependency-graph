@@ -3,6 +3,7 @@ Classes and methods to interact with kroki.io
 """
 
 import logging
+import re
 import uuid
 import xml.etree.ElementTree as ET
 
@@ -14,6 +15,8 @@ from taskdependencygraph.plotting.protocols import PlotMode
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
 _logger = logging.getLogger(__name__)
+
+_UUID_PATTERN = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 
 
 class KrokiConfig(BaseModel):
@@ -31,12 +34,14 @@ def _replace_id_with_svg_id(svg: str) -> str:
     """replaces the ids of all <rect>-tags with 'svg-<id>' to avoid id-clashes in the overall DOM"""
     root = ET.fromstring(svg)
     for rect in root.findall(".//{http://www.w3.org/2000/svg}rect"):
-        if "id" in rect.attrib:
-            try:
-                uuid_id = uuid.UUID(rect.get("id"))  # raises a ValueError if the id is not a valid UUID
-                rect.set("id", f"svg-{uuid_id}")
-            except ValueError:
-                continue
+        rect_id = rect.get("id")
+        if rect_id is not None:
+            # mermaid.js embeds the task id we provided in the rect id, but (depending on the mermaid version)
+            # namespaces it with a prefix like "container-<id>" to avoid clashes across multiple diagrams on one
+            # page, so we extract the id itself instead of requiring the whole attribute to be a bare UUID.
+            match = _UUID_PATTERN.search(rect_id)
+            if match is not None:
+                rect.set("id", f"svg-{match.group(0)}")
     ET.register_namespace("", "http://www.w3.org/2000/svg")  # removes the annoying "ns0:" prefix
     return ET.tostring(root, encoding="unicode", xml_declaration=True)
 
