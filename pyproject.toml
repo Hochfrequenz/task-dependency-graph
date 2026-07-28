@@ -32,7 +32,7 @@ Homepage = "https://github.com/Hochfrequenz/task-dependency-graph"
 
 [dependency-groups]
 tests = [
-    "pytest==8.4.2",
+    "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
     "testcontainers",
     # "syrupy==4.8.2"
