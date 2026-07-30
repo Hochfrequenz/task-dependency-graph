@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 from taskdependencygraph.models.task_dependency_edge import TaskDependencyEdge
@@ -19,7 +19,7 @@ task_A_with_fixed_start_2024_01_01_23_56_00 = TaskNode(
     external_id="A-fixed",
     name="A",
     planned_duration=timedelta(minutes=5),
-    earliest_starttime=datetime(2024, 1, 1, 23, 56, 0, tzinfo=timezone.utc),
+    earliest_starttime=datetime(2024, 1, 1, 23, 56, 0, tzinfo=UTC),
 )
 task_B = TaskNode(
     id=TaskId(uuid.uuid4()),
@@ -33,7 +33,7 @@ task_B_with_fixed_start_2024_01_02 = TaskNode(
     external_id="B-fixed",
     name="B",
     planned_duration=timedelta(minutes=20),
-    earliest_starttime=datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc),
+    earliest_starttime=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
 )
 task_C = TaskNode(
     id=TaskId(uuid.uuid4()),
@@ -56,7 +56,7 @@ graph_anna = TaskDependencyGraph(
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_A.id, task_successor=task_C.id),
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_B.id, task_successor=task_D.id),
     ],
-    starting_time_of_run=datetime.now(timezone.utc),
+    starting_time_of_run=datetime.now(UTC),
 )
 """
     B(20)--->D(4)
@@ -79,7 +79,7 @@ graph_bernd = TaskDependencyGraph(
             task_successor=task_D.id,
         ),
     ],
-    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
 )
 """
     B(20, but not before 2024-01-02)--->D(4)
@@ -106,7 +106,7 @@ graph_carmen = TaskDependencyGraph(
             task_successor=task_D.id,
         ),
     ],
-    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
 )
 """
     B(20, but not before 2024-01-02)--->D(4)
@@ -161,7 +161,7 @@ graph_daniel = TaskDependencyGraph(
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_J.id, task_successor=task_K.id),
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_K.id, task_successor=task_L.id),
     ],
-    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
 )
 """
 Daniel has two parallel paths, none of its tasks has an earliest possible start.
@@ -175,7 +175,7 @@ Note, that the critical path is G->J->K->L.
 """
 
 task_H_with_fixed_start_2024_01_02 = task_H.model_copy(
-    update={"earliest_starttime": datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc)}, deep=True
+    update={"earliest_starttime": datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC)}, deep=True
 )
 graph_emily = TaskDependencyGraph(
     task_list=[task_G, task_H_with_fixed_start_2024_01_02, task_I, task_J, task_K, task_L],
@@ -195,7 +195,7 @@ graph_emily = TaskDependencyGraph(
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_J.id, task_successor=task_K.id),
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_K.id, task_successor=task_L.id),
     ],
-    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
 )
 """
 Emily has a similar structure as Daniel, but the H node has an earliest possible start:
@@ -236,14 +236,14 @@ task_P = TaskNode(
     external_id="P",
     name="P",
     planned_duration=timedelta(minutes=5),
-    earliest_starttime=datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc),
+    earliest_starttime=datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
 )
 task_Q = TaskNode(
     id=TaskId(uuid.uuid4()),
     external_id="Q",
     name="Q",
     planned_duration=timedelta(minutes=3),
-    earliest_starttime=datetime(2024, 1, 3, 0, 0, 0, tzinfo=timezone.utc),
+    earliest_starttime=datetime(2024, 1, 3, 0, 0, 0, tzinfo=UTC),
 )
 task_R = TaskNode(
     id=TaskId(uuid.uuid4()),
@@ -275,14 +275,14 @@ task_U = TaskNode(
     external_id="U",
     name="U",
     planned_duration=timedelta(minutes=22),
-    earliest_starttime=datetime(2024, 1, 3, 0, 26, 0, tzinfo=timezone.utc),
+    earliest_starttime=datetime(2024, 1, 3, 0, 26, 0, tzinfo=UTC),
 )
 task_V = TaskNode(
     id=TaskId(uuid.uuid4()),
     external_id="V",
     name="V",
     planned_duration=timedelta(minutes=23),
-    earliest_starttime=datetime(2024, 1, 4, 0, 0, 0, tzinfo=timezone.utc),
+    earliest_starttime=datetime(2024, 1, 4, 0, 0, 0, tzinfo=UTC),
 )
 task_W = TaskNode(
     id=TaskId(uuid.uuid4()),
@@ -328,7 +328,7 @@ graph_ferdinand = TaskDependencyGraph(
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_X.id, task_successor=task_Y.id),
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_Y.id, task_successor=task_R.id),
     ],
-    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
 )
 
 
@@ -394,7 +394,7 @@ graph_ferdinand_with_milestones = TaskDependencyGraph(
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_X.id, task_successor=task_Y.id),
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=task_Y.id, task_successor=task_R.id),
     ],
-    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+    starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
 )
 """
 same as graph_ferdindand but with milestones at N, S and W

@@ -17,11 +17,10 @@ jobs:
         uses: astral-sh/setup-uv@v9.0.0
         with:
           python-version: "3.14"
-      - name: Run pylint
+      - name: Run ruff check
         if: matrix.linter-env == 'linting'
         run: |
-          uv run --group linting pylint taskdependencygraph
-          uv run --group linting pylint unittests --rcfile=unittests/.pylintrc
+          uv run --group linting ruff check src/taskdependencygraph unittests
           # add single files (ending with .py) or packages here
       - name: Run mypy
         if: matrix.linter-env == 'type_check'

@@ -38,7 +38,7 @@ tests = [
     # "syrupy==4.8.2"
 ]
 linting = [
-    "pylint==4.0.6",
+    "ruff==0.16.0",
     {include-group = "tests"},
 ]
 type_check = [
@@ -53,36 +53,40 @@ coverage = [
     "coverage==7.14.1",
     {include-group = "tests"},
 ]
-formatting = [
-    "black==26.5.1",
-    "isort==8.0.1"
-]
 dev = [
     {include-group = "tests"},
     {include-group = "linting"},
     {include-group = "type_check"},
     {include-group = "coverage"},
     {include-group = "spell_check"},
-    {include-group = "formatting"},
 ]
 
 [tool.uv]
 default-groups = []
 
-[tool.black]
+[tool.ruff]
 line-length = 120
-target_version = ["py311", "py312", "py313", "py314"]
+target-version = "py311"
+extend-exclude = ["*.md"]
 
-[tool.isort]
-line_length = 120
-profile = "black"
-
-[tool.pylint."MESSAGES CONTROL"]
-max-line-length = 120
-disable = [
-    "too-few-public-methods",
-    "fixme"
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "N", "PL", "RUF"]
+ignore = [
+    "PLR0913", # too-many-arguments
+    "PLR0917", # too-many-positional-arguments
+    "PLR0912", # too-many-branches
+    "PLR0915", # too-many-statements
+    "PLR2004", # magic-value-comparison
+    "RUF001", # ambiguous-unicode-character-string
+    "RUF002", # ambiguous-unicode-character-docstring
+    "RUF003", # ambiguous-unicode-character-comment
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"unittests/**" = ["N816"]
+"src/taskdependencygraph/task_dependency_graph.py" = ["W605"]
+"unittests/example_tdgs.py" = ["W605"]
+"unittests/test_task_dependency_graph.py" = ["W605"]
 
 [mypy]
 truethy-bool = true

@@ -3,7 +3,7 @@ example data for task dependency graph tests
 """
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from pydantic import AwareDatetime
@@ -11,8 +11,8 @@ from pydantic import AwareDatetime
 from taskdependencygraph.models import TaskDependencyEdge, TaskDependencyId, TaskId, TaskNode
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
-starting_time_of_run_1 = datetime(year=2024, month=3, day=12, hour=12, minute=10, tzinfo=timezone.utc)
-starting_time_of_run_2 = datetime(year=2024, month=3, day=12, hour=5, minute=0, tzinfo=timezone.utc)
+starting_time_of_run_1 = datetime(year=2024, month=3, day=12, hour=12, minute=10, tzinfo=UTC)
+starting_time_of_run_2 = datetime(year=2024, month=3, day=12, hour=5, minute=0, tzinfo=UTC)
 
 task_example_1 = TaskNode(
     id=TaskId(uuid.uuid4()),

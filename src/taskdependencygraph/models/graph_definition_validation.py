@@ -2,14 +2,14 @@
 Graph definition validation models.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict
 
 from taskdependencygraph.models.ids import TaskDependencyId, TaskId
 
 
-class ValidationCode(str, Enum):
+class ValidationCode(StrEnum):
     """Stable codes identifying the kind of graph definition problem found."""
 
     DUPLICATE_TASK_ID = "DUPLICATE_TASK_ID"

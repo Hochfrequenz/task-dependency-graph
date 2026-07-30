@@ -5,11 +5,20 @@ on:
     branches: [main]
   pull_request: {}
 jobs:
+  # The "black"/"isort" matrix values and the job id are kept as-is even though both now run ruff,
+  # because "black (black)" and "black (isort)" are required status checks in branch protection.
+  # Renaming them requires updating that required-check list in the same change, which is an
+  # admin-level, org-visible action - not done silently here.
   black:
+    name: "black (${{ matrix.tool }})"
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        tool: ["black", "isort"]
+        include:
+          - tool: black
+            command: "ruff format --check ."
+          - tool: isort
+            command: "ruff check --select I ."
     steps:
       - uses: actions/checkout@v6
       - name: Set up uv and Python 3.14
@@ -18,4 +27,4 @@ jobs:
           python-version: "3.14"
       - name: ${{ matrix.tool }} Code Formatter
         run: |
-          uv run --group formatting ${{ matrix.tool }} . --check
+          uv run --group linting ${{ matrix.command }}

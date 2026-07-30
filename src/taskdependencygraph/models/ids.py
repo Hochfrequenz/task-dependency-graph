@@ -35,4 +35,4 @@ PersonId = NewType("PersonId", uuid.UUID)
 technically unique ID of a person
 """
 # the __all__ fixes the mypy warning: Module "..." does not explicitly export attribute "TaskId"
-__all__ = ["RunId", "RunGroupId", "RunGroupPersonRelationId", "TaskId", "TaskDependencyId", "PersonId"]
+__all__ = ["PersonId", "RunGroupId", "RunGroupPersonRelationId", "RunId", "TaskDependencyId", "TaskId"]
