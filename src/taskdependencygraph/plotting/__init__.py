@@ -8,4 +8,4 @@ Otherwise, we'd quickly run into rate limits.
 from taskdependencygraph.plotting.kroki import KrokiClient, KrokiConfig
 from taskdependencygraph.plotting.protocols import DotPlottable, MermaidPlottable
 
-__all__ = ["DotPlottable", "MermaidPlottable", "KrokiClient", "KrokiConfig"]
+__all__ = ["DotPlottable", "KrokiClient", "KrokiConfig", "MermaidPlottable"]

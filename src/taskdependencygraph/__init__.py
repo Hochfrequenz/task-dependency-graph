@@ -36,13 +36,13 @@ from .models import (
 from .task_dependency_graph import TaskDependencyGraph
 
 __all__ = [
+    "ID_OF_ARTIFICIAL_ENDNODE",
+    "ID_OF_ARTIFICIAL_STARTNODE",
     "AddEdgeToGraphPreviewResponse",
     "AddNodeToGraphPreviewResponse",
     "DelayImpact",
     "GraphDefinitionValidationFinding",
     "GraphDefinitionValidationResult",
-    "ID_OF_ARTIFICIAL_ENDNODE",
-    "ID_OF_ARTIFICIAL_STARTNODE",
     "MermaidGanttConfig",
     "Person",
     "PersonId",
@@ -54,8 +54,8 @@ __all__ = [
     "ScheduleEntry",
     "ScheduleReport",
     "TaskDependencyEdge",
-    "TaskDependencyId",
     "TaskDependencyGraph",
+    "TaskDependencyId",
     "TaskExecutionStatus",
     "TaskId",
     "TaskNode",

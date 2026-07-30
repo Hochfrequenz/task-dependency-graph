@@ -10,9 +10,10 @@ TaskDependencyGraph
 # pylint:disable=too-many-public-methods
 import copy
 import uuid
+from collections.abc import Mapping
 from datetime import datetime, timedelta
 from itertools import pairwise
-from typing import Literal, Mapping
+from typing import Literal
 
 import networkx as nx  # type: ignore[import-untyped]
 from networkx import DiGraph, dag_longest_path, dag_longest_path_length
@@ -477,10 +478,9 @@ class TaskDependencyGraph:
         # The longest_path is a list of their task ids as keys.
         if task_id in longest_path:
             return True
-        if (
-            task_id not in self._graph.nodes
-            and task_id != task_node_as_artificial_startnode.id
-            and task_id != task_node_as_artificial_endnode.id
+        if task_id not in self._graph.nodes and task_id not in (
+            task_node_as_artificial_startnode.id,
+            task_node_as_artificial_endnode.id,
         ):
             raise ValueError(f"The task {task_id} is not part of the graph at all")
         return False
@@ -515,8 +515,7 @@ class TaskDependencyGraph:
         self._add_artificial_nodes_and_edges()
         self._account_for_earliest_start()
 
-    # pylint:disable=too-many-return-statements
-    def can_edge_be_added(self, task_dependency: TaskDependencyEdge) -> AddEdgeToGraphPreviewResponse:
+    def can_edge_be_added(self, task_dependency: TaskDependencyEdge) -> AddEdgeToGraphPreviewResponse:  # noqa: PLR0911
         """
         raises an error if the edge can't be added; Does nothing else
         """
@@ -528,8 +527,7 @@ class TaskDependencyGraph:
         if task_dependency.task_predecessor not in self._graph.nodes:
             return AddEdgeToGraphPreviewResponse(
                 can_be_added=False,
-                # pylint:disable=line-too-long
-                error_message=f"Node with id {task_dependency.task_predecessor} (predecessor) does not exist in the graph",
+                error_message=f"Node with id {task_dependency.task_predecessor} (predecessor) does not exist in the graph",  # noqa: E501
             )
         if task_dependency.id in {self._graph.edges[x, y]["domain_model"].id for x, y in self._graph.edges}:
             return AddEdgeToGraphPreviewResponse(
@@ -541,8 +539,7 @@ class TaskDependencyGraph:
             ]
             return AddEdgeToGraphPreviewResponse(
                 can_be_added=False,
-                # pylint:disable=line-too-long
-                error_message=f"Edge between {task_dependency.task_predecessor} and {task_dependency.task_successor} already exists: {conflict_edge}",
+                error_message=f"Edge between {task_dependency.task_predecessor} and {task_dependency.task_successor} already exists: {conflict_edge}",  # noqa: E501
             )
         if self._graph.has_edge(task_dependency.task_successor, task_dependency.task_predecessor):
             conflict_edge = self._graph.edges[task_dependency.task_successor, task_dependency.task_predecessor][
@@ -550,14 +547,12 @@ class TaskDependencyGraph:
             ]
             return AddEdgeToGraphPreviewResponse(
                 can_be_added=False,
-                # pylint:disable=line-too-long
-                error_message=f"Opposite edge between {task_dependency.task_successor} and {task_dependency.task_predecessor} already exists: {conflict_edge}",
+                error_message=f"Opposite edge between {task_dependency.task_successor} and {task_dependency.task_predecessor} already exists: {conflict_edge}",  # noqa: E501
             )
         if nx.has_path(self._graph, task_dependency.task_successor, task_dependency.task_predecessor):
             return AddEdgeToGraphPreviewResponse(
                 can_be_added=False,
-                # pylint:disable=line-too-long
-                error_message=f"Adding this edge would create a cycle between {task_dependency.task_predecessor} and {task_dependency.task_successor}",
+                error_message=f"Adding this edge would create a cycle between {task_dependency.task_predecessor} and {task_dependency.task_successor}",  # noqa: E501
             )
         return AddEdgeToGraphPreviewResponse(can_be_added=True, error_message=None)
 
@@ -1062,7 +1057,7 @@ class TaskDependencyGraph:
             attributes.append("after " + " ".join(str(x) for x in DiGraph.predecessors(self._graph, task_id)))
         attributes.append(f"{int(node.planned_duration.total_seconds() // 60)}m")
         result = f"""
-        {node.name} :{', '.join(attributes)}
+        {node.name} :{", ".join(attributes)}
         """
         return result
 

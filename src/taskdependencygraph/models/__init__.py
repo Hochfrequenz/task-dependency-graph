@@ -23,18 +23,18 @@ from .task_node_as_artificial_endnode import ID_OF_ARTIFICIAL_ENDNODE, task_node
 from .task_node_as_artificial_startnode import ID_OF_ARTIFICIAL_STARTNODE, task_node_as_artificial_startnode
 
 __all__ = [
+    "ID_OF_ARTIFICIAL_ENDNODE",
+    "ID_OF_ARTIFICIAL_STARTNODE",
     "AddEdgeToGraphPreviewResponse",
     "AddNodeToGraphPreviewResponse",
     "DelayImpact",
-    "RemoveEdgeFromGraphPreviewResponse",
-    "RemoveNodeFromGraphPreviewResponse",
     "GraphDefinitionValidationFinding",
     "GraphDefinitionValidationResult",
-    "ID_OF_ARTIFICIAL_ENDNODE",
-    "ID_OF_ARTIFICIAL_STARTNODE",
     "MermaidGanttConfig",
     "Person",
     "PersonId",
+    "RemoveEdgeFromGraphPreviewResponse",
+    "RemoveNodeFromGraphPreviewResponse",
     "RunGroupId",
     "RunGroupPersonRelationId",
     "RunId",

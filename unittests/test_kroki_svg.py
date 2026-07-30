@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -22,7 +22,7 @@ async def test_convert_tdg_to_svg(kroki_client: Plotter, mode: PlotMode) -> None
     tdg = TaskDependencyGraph(
         task_list_2,
         dependency_list_2,
-        datetime(year=2024, month=3, day=12, hour=12, minute=10, tzinfo=timezone.utc),
+        datetime(year=2024, month=3, day=12, hour=12, minute=10, tzinfo=UTC),
     )
     svg = await kroki_client.plot_as_svg(tdg, mode=mode)
     assert svg is not None
@@ -37,15 +37,15 @@ async def test_convert_tdg_to_svg(kroki_client: Plotter, mode: PlotMode) -> None
     for task in task_list_2:
         svg_nodes = get_task_svg_node(task, "g")
         assert len(svg_nodes) == 1
-    task_6 = [t for t in task_list_2 if t.name == "name6"][0]
+    task_6 = next(t for t in task_list_2 if t.name == "name6")
     match mode:
         case "dot":
-            svg_node6 = list(x for x in root.findall(f".//*[@id='svg-{task_6.id}']/") if "polygon" in x.tag)[0]
-            assert (
-                svg_node6.attrib["stroke"] == "red"
-            ), "The ellipse for task 6 should be red because it's on critical path"
+            svg_node6 = next(x for x in root.findall(f".//*[@id='svg-{task_6.id}']/") if "polygon" in x.tag)
+            assert svg_node6.attrib["stroke"] == "red", (
+                "The ellipse for task 6 should be red because it's on critical path"
+            )
         case "gantt":
             svg_node6 = get_task_svg_node(task_6, "rect")[0]
-            assert (
-                svg_node6.attrib["class"] == "task crit0"
-            ), "The ellipse for task 6 should be red because it's on critical path"
+            assert svg_node6.attrib["class"] == "task crit0", (
+                "The ellipse for task 6 should be red because it's on critical path"
+            )

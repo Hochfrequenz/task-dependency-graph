@@ -1,4 +1,4 @@
-from typing import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
 
 import pytest
 from docker.errors import DockerException
@@ -21,8 +21,7 @@ def docker_network() -> Generator[Network, None, None]:
     except DockerException as docker_exception:
         if "Error while fetching server API version" in str(docker_exception):
             raise OSError(
-                # pylint:disable=line-too-long
-                "For the plotting tests with dot and/or mermaid we use test containers. It seems like Docker Desktop is not running."
+                "For the plotting tests with dot and/or mermaid we use test containers. It seems like Docker Desktop is not running."  # noqa: E501
             ) from docker_exception
         raise
     network.create()

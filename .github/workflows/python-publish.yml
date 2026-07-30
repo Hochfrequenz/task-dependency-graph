@@ -28,8 +28,8 @@ jobs:
       - name: Run the checks
         run: |
           uv run --group tests pytest
-          uv run --group linting pylint taskdependencygraph
-          uv run --group linting pylint unittests --rcfile=unittests/.pylintrc
+          uv run --group linting ruff check src/taskdependencygraph unittests
+          uv run --group linting ruff format --check .
           uv run --group type_check mypy --show-error-codes src/taskdependencygraph --strict
           uv run --group type_check mypy --show-error-codes unittests --strict
 

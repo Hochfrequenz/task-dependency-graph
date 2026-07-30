@@ -1,6 +1,6 @@
 import copy
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import networkx as nx  # type: ignore[import-untyped]
 import pytest
@@ -352,12 +352,12 @@ class TestIfPlannedStartingTimeOfTaskIsCalculatedCorrectly:
             pytest.param(
                 build_simple_graph_closed(task_list_1, dependency_list_1b, starting_time_of_run_1),
                 task_example_4.id,
-                datetime(year=2024, month=3, day=12, hour=12, minute=35, tzinfo=timezone.utc),
+                datetime(year=2024, month=3, day=12, hour=12, minute=35, tzinfo=UTC),
             ),
             pytest.param(
                 build_complex_graph(task_list_2, dependency_list_2, starting_time_of_run_1),
                 task_example_9.id,
-                datetime(year=2024, month=3, day=12, hour=12, minute=49, tzinfo=timezone.utc),
+                datetime(year=2024, month=3, day=12, hour=12, minute=49, tzinfo=UTC),
             ),
         ],
     )
@@ -377,31 +377,31 @@ class TestIfPlannedStartingTimeOfTaskIsCalculatedCorrectly:
         pytest.param(
             graph_bernd,
             task_B_with_fixed_start_2024_01_02.id,
-            datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC),
             id="B must not start before its own earliest start",
         ),
         pytest.param(
             graph_bernd,
             task_D.id,
-            datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc) + task_B_with_fixed_start_2024_01_02.planned_duration,
+            datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC) + task_B_with_fixed_start_2024_01_02.planned_duration,
             id="D must not start before B earliest start + B's duration",
         ),
         pytest.param(
             graph_carmen,
             task_B_with_fixed_start_2024_01_02.id,
-            datetime(2024, 1, 2, 0, 1, 0, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 0, 1, 0, tzinfo=UTC),
             id="B's start depends on the start of A+A's duration which is 1 minute after the earliest start of B",
         ),
         pytest.param(
             graph_carmen,
             task_D.id,
-            datetime(2024, 1, 2, 0, 1, 0, tzinfo=timezone.utc) + task_B_with_fixed_start_2024_01_02.planned_duration,
+            datetime(2024, 1, 2, 0, 1, 0, tzinfo=UTC) + task_B_with_fixed_start_2024_01_02.planned_duration,
             id="D's start is B's start + B duration",
         ),
         pytest.param(
             graph_carmen,
             task_C.id,
-            datetime(2024, 1, 2, 0, 1, 0, tzinfo=timezone.utc),
+            datetime(2024, 1, 2, 0, 1, 0, tzinfo=UTC),
             id="C's start is A's start + A duration",
         ),
         pytest.param(
@@ -522,17 +522,17 @@ def test_planned_starting_time_is_calculated_after_modifying_a_graph() -> None:
         external_id="before F",
         name="before F",
         planned_duration=timedelta(minutes=7),
-        earliest_starttime=datetime(2024, 1, 10, 0, 0, 0, tzinfo=timezone.utc),
+        earliest_starttime=datetime(2024, 1, 10, 0, 0, 0, tzinfo=UTC),
     )
     graph_emily_copy.add_task(new_task)
     graph_emily_copy.add_edge(
         TaskDependencyEdge(id=TaskDependencyId(uuid.uuid4()), task_predecessor=new_task.id, task_successor=task_G.id)
     )
     assert graph_emily_copy.calculate_planned_starting_time_of_task(task_G.id) == datetime(
-        2024, 1, 10, 0, 7, 0, tzinfo=timezone.utc
+        2024, 1, 10, 0, 7, 0, tzinfo=UTC
     )
     assert graph_emily_copy.calculate_planned_starting_time_of_task(task_I.id) == datetime(
-        2024, 1, 10, 0, 18, 0, tzinfo=timezone.utc
+        2024, 1, 10, 0, 18, 0, tzinfo=UTC
     )
 
 
@@ -603,7 +603,7 @@ class TestIfListIsCorrectlySortedByStartingTime:
                 build_complex_graph_made_from_unsorted_task_list_and_with_different_starting_time(
                     task_list_2, dependency_list_2, starting_time_of_run_2
                 ),
-                datetime(year=2024, month=3, day=12, hour=5, minute=35, tzinfo=timezone.utc),
+                datetime(year=2024, month=3, day=12, hour=5, minute=35, tzinfo=UTC),
                 task_example_8,
                 task_example_11,
             ),
@@ -611,7 +611,7 @@ class TestIfListIsCorrectlySortedByStartingTime:
                 build_another_complex_graph_with_unsorted_task_list_and_different_starting_time(
                     task_list_2b, dependency_list_3, starting_time_of_run_2
                 ),
-                datetime(year=2024, month=3, day=12, hour=5, minute=35, tzinfo=timezone.utc),
+                datetime(year=2024, month=3, day=12, hour=5, minute=35, tzinfo=UTC),
                 task_example_8,
                 task_example_11,
             ),
@@ -625,15 +625,15 @@ class TestIfListIsCorrectlySortedByStartingTime:
         expected_2: TaskNode,
     ) -> None:
         new_task_list = graph.create_list_of_task_node_copies_with_planned_starting_time()
-        assert (
-            new_task_list[3].planned_starting_time == expected_0
-        ), "The planned starting time hasn't been calculated correctly or the list hasn't been sorted correctly."
-        assert (
-            new_task_list[3].id == expected_1.id
-        ), "The planned starting time hasn't been calculated correctly or the list hasn't been sorted correctly."
-        assert (
-            new_task_list[6].id == expected_2.id
-        ), "The planned starting time hasn't been calculated correctly or the list hasn't been sorted correctly."
+        assert new_task_list[3].planned_starting_time == expected_0, (
+            "The planned starting time hasn't been calculated correctly or the list hasn't been sorted correctly."
+        )
+        assert new_task_list[3].id == expected_1.id, (
+            "The planned starting time hasn't been calculated correctly or the list hasn't been sorted correctly."
+        )
+        assert new_task_list[6].id == expected_2.id, (
+            "The planned starting time hasn't been calculated correctly or the list hasn't been sorted correctly."
+        )
 
     def test_labels(self) -> None:
         tdg = build_complex_graph(task_list_2, dependency_list_2, starting_time_of_run_1)
@@ -658,7 +658,7 @@ class TestIfListIsCorrectlySortedByStartingTime:
 # Issue #84 – planned finish time APIs
 # ---------------------------------------------------------------------------
 
-_T0 = datetime(2024, 6, 1, 8, 0, 0, tzinfo=timezone.utc)
+_T0 = datetime(2024, 6, 1, 8, 0, 0, tzinfo=UTC)
 
 
 def _node(
@@ -718,7 +718,7 @@ class TestPlannedFinishTimeOfTask:
 
     def test_earliest_starttime_delays_finish(self) -> None:
         """A task with earliest_starttime finishes at earliest_starttime + duration."""
-        early = datetime(2024, 6, 1, 10, 0, 0, tzinfo=timezone.utc)  # 2h after T0
+        early = datetime(2024, 6, 1, 10, 0, 0, tzinfo=UTC)  # 2h after T0
         task = _node("delayed", 15, earliest_start=early)
         tdg = TaskDependencyGraph(task_list=[task], dependency_list=[], starting_time_of_run=_T0)
         assert tdg.calculate_planned_finish_time_of_task(task.id) == early + timedelta(minutes=15)
@@ -855,7 +855,7 @@ class TestGetCriticalPathTaskIds:
     def test_earliest_starttime_stretches_onto_critical_path(self) -> None:
         """A task delayed by earliest_starttime gets a stretched edge weight, pushing it onto the path."""
         a = _node("A", 10)  # finishes at T0+10min, path weight 10
-        early = datetime(2024, 6, 1, 9, 0, 0, tzinfo=timezone.utc)  # T0 + 60min
+        early = datetime(2024, 6, 1, 9, 0, 0, tzinfo=UTC)  # T0 + 60min
         b = _node("B", 10, earliest_start=early)  # edge stretched to 60min, path weight 70
         tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[], starting_time_of_run=_T0)
         ids = tdg.get_critical_path_task_ids()
@@ -1064,7 +1064,7 @@ class TestScheduleReport:
 
     def test_earliest_starttime_respected_in_report(self) -> None:
         """A task with earliest_starttime has its delayed planned_start and planned_finish in the report."""
-        early = datetime(2024, 6, 1, 10, 0, 0, tzinfo=timezone.utc)  # T0 + 2h
+        early = datetime(2024, 6, 1, 10, 0, 0, tzinfo=UTC)  # T0 + 2h
         a = _node("A", 30, earliest_start=early)
         tdg = TaskDependencyGraph(task_list=[a], dependency_list=[], starting_time_of_run=_T0)
         report = tdg.create_schedule_report()
@@ -1273,7 +1273,7 @@ class TestTotalSlack:
 
     def test_earliest_starttime_wait_gives_slack_to_predecessor(self) -> None:
         """When a successor has earliest_starttime, its predecessor gains slack from the wait."""
-        early = datetime(2024, 6, 1, 9, 0, 0, tzinfo=timezone.utc)  # T0 + 60 min
+        early = datetime(2024, 6, 1, 9, 0, 0, tzinfo=UTC)  # T0 + 60 min
         a = _node("A", 10)
         b = _node("B", 20, earliest_start=early)
         tdg = TaskDependencyGraph(task_list=[a, b], dependency_list=[_edge(a, b)], starting_time_of_run=_T0)
@@ -1493,7 +1493,7 @@ class TestScheduleEntryLateStartFinish:
           late_start[G]=0, late_start[J]=1, late_start[K]=21, late_start[L]=41
           late_start[H]=21, late_start[I]=31
         """
-        t0 = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        t0 = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
         report = graph_daniel.create_schedule_report()
         by_id = {e.task_id: e for e in report.entries}
 
@@ -2115,7 +2115,7 @@ class TestToDot:
                     task_successor=task_N.id,
                 )
             ],
-            starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
+            starting_time_of_run=datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC),
         )
         dot = tdg.to_dot()
         # edge must be rendered predecessor → successor, not the other way around
