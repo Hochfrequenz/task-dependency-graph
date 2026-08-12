@@ -8,7 +8,6 @@ from taskdependencygraph.plotting.kroki import KrokiClient
 from taskdependencygraph.plotting.protocols import PlotMode, Plotter
 from taskdependencygraph.task_dependency_graph import TaskDependencyGraph
 
-# don't ask; it's some weird type-checking issues (related to our tox setup) that require me to do this ugly import
 from .example_data_for_test_task_dependency_graph import dependency_list_2, task_list_2
 
 
