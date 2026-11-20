@@ -43,7 +43,7 @@ linting = [
     {include-group = "tests"},
 ]
 type_check = [
-    "mypy==2.4.0",
+    "mypy==2.4.1",
     "types-docker",
     {include-group = "tests"},
 ]
